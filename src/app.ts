@@ -7,32 +7,59 @@ class MainFrame extends Frame {
   _onInit() : void {
     console.log("init");
     this._menuBar = new MenuBar(this);
-
-    let fileMenuItem = new MenuItem("File");
-    fileMenuItem._appendItem(new MenuItem("New"));
-    fileMenuItem._appendItem(new MenuItem("Open"));
-    fileMenuItem._appendItem(new MenuItem("Save"));
-
-    let subMenuItem = new MenuItem("SubMenu");
-    subMenuItem._appendItem(new MenuItem("Item0"));
-    subMenuItem._appendItem(new MenuItem("Item1"));
-    subMenuItem._appendItem(new MenuItem("Item2"));
-    fileMenuItem._appendItem(subMenuItem);
-
-    this._menuBar._appendItem(fileMenuItem);
-    
-    let editMenuItem = new MenuItem("Edit");
-    editMenuItem._appendItem(new MenuItem("Undo"));
-    editMenuItem._appendItem(new MenuItem("Redo"));
-    editMenuItem._appendItem(new MenuItemSeparator());
-    editMenuItem._appendItem(new MenuItem("Cut"));
-    editMenuItem._appendItem(new MenuItem("Copy"));
-    editMenuItem._appendItem(new MenuItem("Paste"));
-    editMenuItem._appendItem(new MenuItem("Delete"));
-    this._menuBar._appendItem(editMenuItem);
-    this._menuBar._appendItem(new MenuItem("View"));
-    this._menuBar._appendItem(new MenuItem("Tools"));
-    this._menuBar._appendItem(new MenuItem("Help"));
+    this._menuBar._appendNestedMenuItems([
+      [
+        "ファイル",
+        new MenuItem("新規作成", "Ctrl + N"),
+        new MenuItem("開く", "Ctrl + O"),
+        new MenuItem("保存", "Ctrl + S"),
+        new MenuItem("名前つけて保存", "Ctrl + Shift + S"),
+        new MenuItemSeparator(),
+        [
+          "サブメニュー 0",
+          new MenuItem("項目 0"),
+          new MenuItem("項目 1"),
+          [
+            "サブメニュー 1",
+            new MenuItem("項目 3"),
+            new MenuItem("項目 4"),
+            new MenuItem("項目 5")
+          ],
+          new MenuItem("項目 2")
+        ]
+      ],
+      [
+        "編集",
+        new MenuItem("元に戻す", "Ctrl + Z"),
+        new MenuItem("やり直す", "Ctrl + Y"),
+        new MenuItemSeparator(),
+        new MenuItem("切り取り", "Ctrl + X"),
+        new MenuItem("コピー", "Ctrl + C"),
+        new MenuItem("貼り付け", "Ctrl + V"),
+        new MenuItem("削除", "Delete"),
+        new MenuItemSeparator(),
+        new MenuItem("全て選択", "Ctrl + A")
+      ],
+      [
+        "表示",
+        new MenuItem("メニュー バー"),
+        new MenuItem("ステータス バー")
+      ],
+      [
+        "ツール",
+        new MenuItem("環境設定")
+      ],
+      [
+        "ヘルプ",
+        new MenuItem("ヘルプ")
+      ]
+    ]);
+    this._menuBar._eventOnItemClick = function(item) {
+      let elm = document.createElement("div");
+      elm.style.textAlign = "center";
+      elm.innerText = item._getLabel();
+      document.getElementById("app")?.appendChild(elm);
+    }
   }
 }
 
