@@ -107,7 +107,7 @@ export class MenuItem {
 
   protected _onPopupKeyDown(e: KeyboardEvent) {
     if (e.altKey) {
-      this._closeThisPopup();
+      this._escapeMenu();
       return;
     }
     if (e.shiftKey || e.ctrlKey || e.metaKey)
