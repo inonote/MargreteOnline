@@ -11,10 +11,12 @@ export class MenuItem {
   protected _elmItemAccessKey: HTMLDivElement;
   protected _elmPopup?: HTMLDivElement;
   
+  protected _id: string = "";
   protected _label: string = "";
   protected _accessKey: string = "";
   protected _disabled: boolean = false;
   protected _isRoot: boolean = false;
+  protected _isChecked: boolean = false;
 
   protected _dirty: boolean = true;
 
@@ -27,7 +29,7 @@ export class MenuItem {
 
   protected _menuPopupDelay: number = 250;
 
-  constructor(label?: string, accessKey?: string) {
+  constructor(id: string, label?: string, accessKey?: string) {
     this._elm = this._createElement();
 
     this._elmItem = createDivElement("ui-menu-item-label");
@@ -37,6 +39,7 @@ export class MenuItem {
     this._elmItem.appendChild(this._elmItemAccessKey);
     this._elm.appendChild(this._elmItem);
     
+    this._id = id;
     this._label = label || "";
     this._accessKey = accessKey || "";
 
@@ -54,6 +57,7 @@ export class MenuItem {
     this._elmItemText.innerText = this._label;
     this._elmItemAccessKey.classList.toggle("ui-hide", this._accessKey === "");
     this._elmItemAccessKey.innerText = this._accessKey;
+    this._elm.classList.toggle("ui-checked", this._isChecked);
   }
 
   protected _onItemMouseUp(item: MenuItem) {
@@ -102,6 +106,13 @@ export class MenuItem {
   }
 
   protected _onPopupKeyDown(e: KeyboardEvent) {
+    if (e.altKey) {
+      this._closeThisPopup();
+      return;
+    }
+    if (e.shiftKey || e.ctrlKey || e.metaKey)
+      return;
+    
     if (e.key === "ArrowUp") {
       let index = this._getActiveItemIndex();
       for(let i = 0; i < this._items.length; ++i) {
@@ -142,6 +153,14 @@ export class MenuItem {
         this._onPrevRootSubMenu();
       else
         this._closeThisPopup();
+    }
+    else if (e.key === "Escape") {
+      this._closeThisPopup();
+    }
+    else if (e.key === "Enter") {
+      let item = this._getActiveItem();
+      if (item)
+        this._onItemMouseUp(item);
     }
   }
 
@@ -271,7 +290,7 @@ export class MenuItem {
       }
 
       if (v.length) {
-        let childItem = new MenuItem(v[0]);
+        let childItem = new MenuItem("", v[0]);
         this._appendItem(childItem);
         childItem._appendNestedMenuItems(v, true);
       }
@@ -300,8 +319,15 @@ export class MenuItem {
   _getItemHtmlElement() { return this._elmItem; }
   _hasChildren() { return this._items.length > 0; }
   _getChildren() { return this._items; }
+  _getId() { return this._id; }
   _getLabel() { return this._label; }
   _isDisabled() { return this._disabled; }
+  _setCheck(checked: boolean) {
+    this._dirty = checked !== this._isChecked;
+    this._isChecked = checked;
+    this._updateElement();
+  }
+  _getCheck() { return this._isChecked; }
   
   _getPopupHtmlElement() : HTMLDivElement {
     if (!this._elmPopup) {
@@ -326,10 +352,35 @@ export class MenuItem {
   _eventOnItemClick(item: MenuItem) {
     this._parent?.deref()?._eventOnItemClick(item);
   }
+
+  _getItemById(id: string) : MenuItem|undefined {
+    if (id.length === 0)
+      return;
+    
+    if (this._id === id) return this;
+    for(const item of this._items) {
+      let x = item._getItemById(id);
+      if (x)
+        return x;
+    }
+  }
+
+  _setCheckAll(id: string, checked: boolean) {
+    if (id.length === 0)
+      return;
+    
+    if (this._id === id)
+      this._setCheck(checked);
+    for(const item of this._items) {
+      item._setCheckAll(id, checked);
+    }
+  }
 }
 
 export class MenuItemSeparator extends MenuItem {
   protected _disabled: boolean = true;
+
+  constructor() { super(""); }
 
   protected _createElement() : HTMLDivElement {
     return createDivElement("ui-menu-item-separator");
@@ -349,12 +400,19 @@ export class MenuBar extends MenuItem {
   protected _isRoot: boolean = true;
 
   constructor(frame: Frame) {
-    super();
+    super("");
 
     this._frame = frame;
     this._frame._getHtmlElement().appendChild(this._elm);
 
-    window.addEventListener("click", e => this._onClickBackground(e));
+    window.addEventListener("mousedown", e => this._onClickBackground(e));
+    window.addEventListener("keydown", e => {
+      if (!e.repeat && e.altKey) {
+        this._onItemMouseDown(this._items[0]);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
   }
 
   protected _createElement() : HTMLDivElement {
@@ -393,6 +451,12 @@ export class MenuBar extends MenuItem {
       this._activateMenu(undefined);
       return;
     }
+  }
+
+  protected _closePopup() {
+    super._closePopup();
+    this._popupDelayTimerFor = undefined;
+    this._activateMenu(undefined);
   }
 
   protected _onNextRootSubMenu() {
