@@ -1,9 +1,6 @@
 import { createDivElement } from "./element-util";
 import { Frame } from "./frame";
 
-let menuItemLastId = 0;
-let menuItemMap: Map<number, MenuItem> = new Map();
-
 export class MenuItem {
   protected _elm: HTMLDivElement;
   protected _elmItem: HTMLDivElement;
@@ -393,6 +390,22 @@ export class MenuItemSeparator extends MenuItem {
   _getHtmlElement() : HTMLDivElement { return this._elm; }
 }
 
+export class MenuItemSpacer extends MenuItem {
+  protected _disabled: boolean = true;
+
+  constructor() { super(""); }
+
+  protected _createElement() : HTMLDivElement {
+    return createDivElement("ui-menu-item-spacer");
+  }
+
+  protected _updateElement() { }
+  
+  _appendItem(item: MenuItem) { }
+
+  _getHtmlElement() : HTMLDivElement { return this._elm; }
+}
+
 export class MenuBar extends MenuItem {
   protected _frame: Frame;
 
@@ -405,7 +418,7 @@ export class MenuBar extends MenuItem {
     this._frame = frame;
     this._frame._getHtmlElement().appendChild(this._elm);
 
-    window.addEventListener("mousedown", e => this._onClickBackground(e));
+    window.addEventListener("mousedown", e => this._onClickBackground(e), { capture: true });
     window.addEventListener("keydown", e => {
       if (!e.repeat && e.altKey) {
         this._onItemMouseDown(this._items[0]);
@@ -419,9 +432,15 @@ export class MenuBar extends MenuItem {
     return createDivElement("ui-menubar");
   }
 
-  protected _onItemMouseUp(item: MenuItem) {}
+  protected _onItemMouseUp(item: MenuItem) {
+    if (item._hasChildren())
+      return;
+    this._eventOnItemClick(item);
+  }
 
   protected _onItemMouseDown(item: MenuItem) {
+    if (!item._hasChildren())
+      return;
     this._popupDelayTimerFor = undefined;
     this._activateMenu(this._selectedItem !== item ? item : undefined);
   }
@@ -446,7 +465,10 @@ export class MenuBar extends MenuItem {
   }
 
   protected _onClickBackground(e: MouseEvent) {
-    if (!(e.target instanceof Node) || !this._elm.contains(e.target)) {
+    if (!this._selectedItem)
+      return;
+    
+    if (!(e.target instanceof Node) || !this._selectedItem._getHtmlElement().contains(e.target)) {
       this._popupDelayTimerFor = undefined;
       this._activateMenu(undefined);
       return;
@@ -466,7 +488,7 @@ export class MenuBar extends MenuItem {
       if (index >= this._items.length)
         index = 0;
       
-      if (!this._items[index]._isDisabled())
+      if (!this._items[index]._isDisabled() && this._items[index]._hasChildren())
         break;
     }
     let item = this._items[index];
@@ -481,7 +503,7 @@ export class MenuBar extends MenuItem {
       if (index < 0)
         index = this._items.length - 1;
       
-      if (!this._items[index]._isDisabled())
+      if (!this._items[index]._isDisabled() && this._items[index]._hasChildren())
         break;
     }
     
