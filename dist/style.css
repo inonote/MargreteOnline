@@ -17,7 +17,17 @@ html, body {
   font-size: 13px;
   margin: 0;
   background: #ccc;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
   -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
 .ui-hide {
@@ -44,6 +54,11 @@ html, body {
   z-index: 1000;
 }
 
+.ui-popupmenu {
+  position: fixed;
+  user-select: none;
+}
+
 .ui-menu-popup:focus {
   outline: none;
 }
@@ -56,23 +71,21 @@ html, body {
 
 .ui-menu-item > .ui-menu-popup {
   display: none;
-  position: absolute;
-  left: calc(100% - 2px);
-  top: -3px;
+  position: fixed;
 }
 .ui-menubar > .ui-menu-item > .ui-menu-popup,
 .ui-toolbar > .ui-menu-item > .ui-menu-popup {
-  left: 0;
-  top: calc(100% - 3px);
   animation: none;
-}
-.ui-toolbar > .ui-menu-item > .ui-menu-popup {
-  top: calc(100% - 5px);
 }
 
 
 .ui-menu-item.ui-show-dropdown > .ui-menu-popup {
   display: block;
+}
+.ui-popupmenu.ui-show-dropdown-test,
+.ui-menu-item.ui-show-dropdown-test > .ui-menu-popup {
+  display: block;
+  animation: none !important;
 }
 
 .ui-menu-item {
@@ -128,7 +141,7 @@ html, body {
 
 .ui-menu-item-label > .ui-menu-item-label-access-key {
   margin-left: 40px;
-  opacity: 0.75;
+  opacity: 0.5;
 }
 
 

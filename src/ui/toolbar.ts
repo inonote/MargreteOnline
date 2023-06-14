@@ -27,11 +27,15 @@ export class ToolBarButton extends MenuItem {
   }
 }
 
+
+
 export class ToolBarButtonSeparator extends MenuItemSeparator {
   protected _createElement() : HTMLDivElement {
     return createDivElement("ui-toolbar-item-separator");
   }
 }
+
+
 
 export class ToolBar extends MenuItem {
   protected _frame: Frame;
@@ -52,14 +56,14 @@ export class ToolBar extends MenuItem {
     return createDivElement("ui-toolbar");
   }
 
-  protected _onItemMouseUp(item: MenuItem) {
-    if (item._hasChildren())
+  protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
+    if (item._hasChildren() || !isPrimaryButton)
       return;
     this._eventOnItemClick(item);
   }
 
-  protected _onItemMouseDown(item: MenuItem) {
-    if (!item._hasChildren())
+  protected _onItemMouseDown(item: MenuItem, isPrimaryButton: boolean) {
+    if (!item._hasChildren() || !isPrimaryButton)
       return;
     this._popupDelayTimerFor = undefined;
     this._activateMenu(this._selectedItem !== item ? item : undefined);
@@ -74,7 +78,7 @@ export class ToolBar extends MenuItem {
     
     if (this._selectedItem._hasChildren() && !item._hasChildren())
       return;
-      
+
     super._onItemHover(item);
     this._updateMenuItems();
   }

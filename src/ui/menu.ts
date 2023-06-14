@@ -1,5 +1,6 @@
 import { createDivElement } from "./element-util";
 import { Frame } from "./frame";
+import { Position, Size, Rect } from "./util";
 
 export class MenuItem {
   protected _elm: HTMLDivElement;
@@ -57,7 +58,7 @@ export class MenuItem {
     this._elm.classList.toggle("ui-checked", this._isChecked);
   }
 
-  protected _onItemMouseUp(item: MenuItem) {
+  protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
     if (item._hasChildren()) {
       if (this._selectedItem === item)
         return;
@@ -69,7 +70,7 @@ export class MenuItem {
     this._escapeMenu();
   }
 
-  protected _onItemMouseDown(item: MenuItem) {
+  protected _onItemMouseDown(item: MenuItem, isPrimaryButton: boolean) {
   }
 
   protected _onItemHover(item: MenuItem, noPopup: boolean = false) {
@@ -149,15 +150,15 @@ export class MenuItem {
       if (this._parent?.deref()?._isRoot)
         this._onPrevRootSubMenu();
       else
-        this._closeThisPopup();
+        this._closeOwnPopup();
     }
     else if (e.key === "Escape") {
-      this._closeThisPopup();
+      this._closeOwnPopup();
     }
     else if (e.key === "Enter") {
       let item = this._getActiveItem();
       if (item)
-        this._onItemMouseUp(item);
+        this._onItemMouseUp(item, true);
     }
   }
 
@@ -201,11 +202,72 @@ export class MenuItem {
     this._updateMenuItems();
   }
 
-  protected _closeThisPopup() {
+  protected _closeOwnPopup() {
     this._activateMenu(undefined);
     this._updateMenuItems();
 
     this._parent?.deref()?._closePopup();
+  }
+
+  protected _calcItemRect() : Rect {
+    let br = this._elmItem.getBoundingClientRect();
+    return new Rect(br.left, br.top, br.right, br.bottom);
+  }
+
+  protected _calcPopupRect() : Rect {
+    if (!this._hasChildren())
+      return new Rect();
+    this._getPopupHtmlElement().classList.add("ui-show-dropdown-test");
+
+    let br = this._getPopupHtmlElement().getBoundingClientRect();
+
+    this._getPopupHtmlElement().classList.remove("ui-show-dropdown-test");
+    
+    return new Rect(br.left, br.top, br.right, br.bottom);
+  }
+
+  protected _calcPopupPosition(origin?: Position) : Position {
+    let itemRect = this._calcItemRect();
+    let popupRect = this._calcPopupRect();
+    let windowW = window.innerWidth;
+    let windowH = window.innerHeight;
+
+    let ret = new Position(origin?._x, origin?._y);
+
+    if (!origin) {
+      if (this._parent?.deref()?._isRoot) {
+        ret._x = itemRect._left;
+        ret._y = itemRect._bottom;
+        
+        if (ret._x + popupRect._width > windowW) {
+          ret._x = itemRect._left - popupRect._width + itemRect._width + 2;
+        }
+      }
+      else {
+        ret._x = itemRect._right - 2;
+        ret._y = itemRect._top - 3;
+        if (ret._x + popupRect._width > windowW) {
+          ret._x = itemRect._left - popupRect._width;
+        }
+      }
+    }
+
+    if (ret._x < 0)
+      ret._x = 0;
+    else if (ret._x + popupRect._width > windowW)
+      ret._x = windowW - popupRect._width;
+    if (ret._y < 0)
+      ret._y = 0;
+    else if (ret._y + popupRect._height > windowH)
+      ret._y = windowH - popupRect._height;
+    return ret;
+  }
+
+  protected _layoutPopup(origin?: Position) {
+    let pos = this._calcPopupPosition(origin);
+    
+    this._getPopupHtmlElement().style.left = pos._x + "px";
+    this._getPopupHtmlElement().style.top = pos._y + "px";
   }
 
   _activateMenu(item?: MenuItem) {
@@ -229,6 +291,7 @@ export class MenuItem {
     this._selectedItem = item;
     if (item && item._hasChildren()) {
       item._getHtmlElement().classList.add("ui-show-dropdown");
+      item._layoutPopup();
       if (item._elmPopup)
         item._elmPopup.focus();
     }
@@ -257,12 +320,12 @@ export class MenuItem {
     this._elm.classList.add("ui-has-popup");
 
     item._getItemHtmlElement().addEventListener("mouseup", (e) => {
-      this._onItemMouseUp(item);
+      this._onItemMouseUp(item, e.button === 0);
       e.stopPropagation();
       e.preventDefault();
     });
     item._getItemHtmlElement().addEventListener("mousedown", (e) => {
-      this._onItemMouseDown(item);
+      this._onItemMouseDown(item, e.button === 0);
       e.stopPropagation();
       e.preventDefault();
     });
@@ -337,6 +400,10 @@ export class MenuItem {
         e.stopPropagation();
         e.preventDefault();
       });
+      this._elmPopup.addEventListener("contextmenu", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      });
       this._elmPopup.addEventListener("keydown", (e) => {
         this._onPopupKeyDown(e);
         e.stopPropagation();
@@ -374,6 +441,8 @@ export class MenuItem {
   }
 }
 
+
+
 export class MenuItemSeparator extends MenuItem {
   protected _disabled: boolean = true;
 
@@ -389,6 +458,8 @@ export class MenuItemSeparator extends MenuItem {
 
   _getHtmlElement() : HTMLDivElement { return this._elm; }
 }
+
+
 
 export class MenuItemSpacer extends MenuItem {
   protected _disabled: boolean = true;
@@ -406,6 +477,8 @@ export class MenuItemSpacer extends MenuItem {
   _getHtmlElement() : HTMLDivElement { return this._elm; }
 }
 
+
+
 export class MenuBar extends MenuItem {
   protected _frame: Frame;
 
@@ -421,7 +494,7 @@ export class MenuBar extends MenuItem {
     window.addEventListener("mousedown", e => this._onClickBackground(e), { capture: true });
     window.addEventListener("keydown", e => {
       if (!e.repeat && e.altKey) {
-        this._onItemMouseDown(this._items[0]);
+        this._onItemMouseDown(this._items[0], true);
         e.preventDefault();
         e.stopPropagation();
       }
@@ -432,14 +505,14 @@ export class MenuBar extends MenuItem {
     return createDivElement("ui-menubar");
   }
 
-  protected _onItemMouseUp(item: MenuItem) {
-    if (item._hasChildren())
+  protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
+    if (item._hasChildren() || !isPrimaryButton)
       return;
     this._eventOnItemClick(item);
   }
 
-  protected _onItemMouseDown(item: MenuItem) {
-    if (!item._hasChildren())
+  protected _onItemMouseDown(item: MenuItem, isPrimaryButton: boolean) {
+    if (!item._hasChildren() || !isPrimaryButton)
       return;
     this._popupDelayTimerFor = undefined;
     this._activateMenu(this._selectedItem !== item ? item : undefined);
@@ -513,6 +586,78 @@ export class MenuBar extends MenuItem {
     let item = this._items[index];
     this._activateMenu(item);
     item._hoverItem(item._getChildren()[0], true);
+  }
+
+  _getPopupHtmlElement() : HTMLDivElement { return this._elm; }
+}
+
+
+export class ContextMenu extends MenuItem {
+  protected _frame: Frame;
+
+  protected _visible: boolean = false;
+  protected _isRoot: boolean = false;
+
+  constructor(frame: Frame) {
+    super("");
+    this._getPopupHtmlElement().classList.add("ui-hide");
+    this._getPopupHtmlElement().setAttribute("tabindex", "0");
+    this._getPopupHtmlElement().addEventListener("mouseleave", (e) => {
+      this._onPopupLeave();
+      e.stopPropagation();
+      e.preventDefault();
+    });
+    this._getPopupHtmlElement().addEventListener("keydown", (e) => {
+      this._onPopupKeyDown(e);
+      e.stopPropagation();
+      e.preventDefault();
+    });
+
+    this._frame = frame;
+    this._frame._getHtmlElement().appendChild(this._elm);
+
+    window.addEventListener("mousedown", e => this._onClickBackground(e), { capture: true });
+  }
+
+  protected _createElement() : HTMLDivElement {
+    return createDivElement("ui-popupmenu ui-menu-popup");
+  }
+
+  protected _onClickBackground(e: MouseEvent) {
+    if (!this._visible)
+      return;
+    
+    if (!(e.target instanceof Node) || !this._getPopupHtmlElement().contains(e.target)) {
+      this._escapeMenu();
+      return;
+    }
+  }
+
+  protected _closePopup() {
+    super._closePopup();
+    this._getPopupHtmlElement().focus();
+  }
+  
+  protected _closeOwnPopup() {
+    super._closeOwnPopup();
+    this._cancelPopup();
+  }
+
+  protected _escapeMenu() {
+    super._escapeMenu();
+    this._cancelPopup();
+  }
+
+  _showPopup(x: number, y: number) {
+    this._visible = true;
+    this._getPopupHtmlElement().classList.remove("ui-hide");
+    this._layoutPopup(new Position(x, y));
+    this._getPopupHtmlElement().focus();
+  }
+
+  _cancelPopup() {
+    this._visible = false;
+    this._getPopupHtmlElement().classList.add("ui-hide");
   }
 
   _getPopupHtmlElement() : HTMLDivElement { return this._elm; }

@@ -1,9 +1,10 @@
 import { Frame } from "./ui/frame";
-import { MenuBar, MenuItem, MenuItemSeparator, MenuItemSpacer } from "./ui/menu";
+import { MenuBar, MenuItem, MenuItemSeparator, MenuItemSpacer, ContextMenu } from "./ui/menu";
 import { ToolBar, ToolBarButton, ToolBarButtonSeparator } from "./ui/toolbar";
 
 class MainFrame extends Frame {
   _menuBar?: MenuBar;
+  _contextMenu?: ContextMenu;
   _toolBar?: ToolBar;
 
   _onInit() : void {
@@ -142,8 +143,41 @@ class MainFrame extends Frame {
     ]);
     
     this._toolBar._eventOnItemClick = this._onCommand;
-
     this._toolBar._setCheckAll("pen", true);
+
+    this._contextMenu = new ContextMenu(this);
+    this._contextMenu._appendNestedMenuItems([
+      new MenuItem("undo", "元に戻す", "Ctrl + Z"),
+      new MenuItem("redo", "やり直す", "Ctrl + Y"),
+      new MenuItemSeparator(),
+      new MenuItem("cut-notes", "ノーツを切り取り", "Ctrl + X"),
+      new MenuItem("copy-notes", "ノーツをコピー", "Ctrl + C"),
+      new MenuItem("copy-events", "イベントをコピー", "Ctrl + Shift + C"),
+      new MenuItem("paste", "貼り付け", "Ctrl + V"),
+      new MenuItem("paste-fliped", "左右反転貼り付け", "Ctrl + Shift + V"),
+      new MenuItemSeparator(),
+      new MenuItem("select-all", "全選択", "Ctrl + A"),
+      new MenuItem("select-head", "先頭からカーソル位置まで選択"),
+      new MenuItem("select-tail", "カーソル位置から末尾まで選択"),
+      new MenuItem("unselect", "選択解除", "Ctrl + Shift + A"),
+      new MenuItemSeparator(),
+      new MenuItem("delete-notes", "選択ノーツ削除", "Delete"),
+      new MenuItem("delete-child-notes", "選択子ノーツ削除", "Ctrl + Delete"),
+      new MenuItem("delete-events", "選択イベント削除", "Shift + Delete"),
+      new MenuItem("move-til", "選択ノーツを現在のタイムラインに移動", "Ctrl + T"),
+      new MenuItemSeparator(),
+      new MenuItem("slide-begin-link", "SLIDE 始点連動無効", "F"),
+      [
+        "a",
+        new MenuItem("a", "a"),
+        new MenuItem("b", "b"),
+      ]
+    ]);
+
+    window.addEventListener("contextmenu", (e) => {
+      this._contextMenu?._showPopup(e.clientX, e.clientY);
+      e.preventDefault();
+    });
   }
 
   _onCommand(item: MenuItem) {
