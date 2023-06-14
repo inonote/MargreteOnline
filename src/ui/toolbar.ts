@@ -72,6 +72,9 @@ export class ToolBar extends MenuItem {
       return;
     }
     
+    if (this._selectedItem._hasChildren() && !item._hasChildren())
+      return;
+      
     super._onItemHover(item);
     this._updateMenuItems();
   }

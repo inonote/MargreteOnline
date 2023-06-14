@@ -95,9 +95,6 @@ class MainFrame extends Frame {
         new MenuItemSeparator(),
         new MenuItem("about", "Margrete Online について..."),
       ],
-      new MenuItemSpacer(),
-      new MenuItem("about", "Margrete Online v0.1")
-
     ]);
     this._menuBar._eventOnItemClick = this._onCommand;
 

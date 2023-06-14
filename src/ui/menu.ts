@@ -24,7 +24,7 @@ export class MenuItem {
   protected _popupDelayTimerFor?: MenuItem;
   protected _popupDelayTimer: number = 0;
 
-  protected _menuPopupDelay: number = 250;
+  protected _menuPopupDelay: number = 500;
 
   constructor(id: string, label?: string, accessKey?: string) {
     this._elm = this._createElement();
@@ -452,6 +452,9 @@ export class MenuBar extends MenuItem {
       return;
     }
     
+    if (this._selectedItem._hasChildren() && !item._hasChildren())
+      return;
+      
     super._onItemHover(item);
     this._updateMenuItems();
   }
