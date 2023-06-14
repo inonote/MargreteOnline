@@ -21,6 +21,8 @@ html, body {
   width: 100%;
   height: 100%;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #app {
@@ -40,7 +42,6 @@ html, body {
 .ui-toolbar {
   display: flex;
   flex-wrap: wrap;
-  user-select: none;
   background: var(--ui-window-bg);
   color: var(--ui-window-text);
   border-bottom: var(--ui-item-separator) 1px solid;
@@ -53,12 +54,13 @@ html, body {
   border-radius: var(--ui-window-radius);
   box-shadow: var(--ui-window-shadow);
   animation: uiMenuPopupShow .125s ease-out;
+  max-height: calc(100svh - 30px);
+  overflow-y: auto;
   z-index: 1000;
 }
 
 .ui-popupmenu {
   position: fixed;
-  user-select: none;
 }
 
 .ui-menu-popup:focus {
