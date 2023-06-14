@@ -287,7 +287,7 @@ export class MenuItem {
       }
 
       if (v.length) {
-        let childItem = new MenuItem("", v[0]);
+        let childItem = (v[0] instanceof MenuItem) ? v[0] : new MenuItem("", v[0]);
         this._appendItem(childItem);
         childItem._appendNestedMenuItems(v, true);
       }

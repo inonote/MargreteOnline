@@ -102,24 +102,24 @@ class MainFrame extends Frame {
     this._menuBar._setCheckAll("pen", true);
 
     this._toolBar = new ToolBar(this);
-    this._toolBar._appendItem(new ToolBarButton("sync", "arrow-repeat", "譜面の同期"));
-    this._toolBar._appendItem(new ToolBarButtonSeparator());
-    this._toolBar._appendItem(new ToolBarButton("open", "folder2", "開く"));
-    this._toolBar._appendItem(new ToolBarButton("save", "save", "上書き保存"));
-    this._toolBar._appendItem(new ToolBarButtonSeparator());
-    this._toolBar._appendItem(new ToolBarButton("cut-notes", "scissors", "切り取り"));
-    this._toolBar._appendItem(new ToolBarButton("copy-notes", "files", "コピー"));
-    this._toolBar._appendItem(new ToolBarButton("paste", "clipboard-fill", "貼り付け"));
-    this._toolBar._appendItem(new ToolBarButton("delete-notes", "x-lg", "削除"));
-    this._toolBar._appendItem(new ToolBarButtonSeparator());
-    this._toolBar._appendItem(new ToolBarButton("pen", "pencil-fill", "ペン"));
-    this._toolBar._appendItem(new ToolBarButton("eraser", "eraser-fill", "消しゴム"));
-    this._toolBar._appendItem(new ToolBarButton("select", "bounding-box-circles", "選択"));
-    this._toolBar._appendItem(new ToolBarButton("attr-edit", "screwdriver", "属性選択"));
-    this._toolBar._appendItem(new ToolBarButtonSeparator());
-    {
-      let btn = new ToolBarButton("quantize", "", "4 分音符");
-      btn._appendNestedMenuItems([
+    this._toolBar._appendNestedMenuItems([
+      new ToolBarButton("sync", "arrow-repeat", "譜面の同期"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("open", "folder2", "開く"),
+      new ToolBarButton("save", "save", "上書き保存"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("cut-notes", "scissors", "切り取り"),
+      new ToolBarButton("copy-notes", "files", "コピー"),
+      new ToolBarButton("paste", "clipboard-fill", "貼り付け"),
+      new ToolBarButton("delete-notes", "x-lg", "削除"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("pen", "pencil-fill", "ペン"),
+      new ToolBarButton("eraser", "eraser-fill", "消しゴム"),
+      new ToolBarButton("select", "bounding-box-circles", "選択"),
+      new ToolBarButton("attr-edit", "screwdriver", "属性選択"),
+      new ToolBarButtonSeparator(),
+      [
+        new ToolBarButton("quantize", "", "4 分音符"),
         new MenuItem("quantize-100", "4 分音符"),
         new MenuItem("quantize-100", "8 分音符"),
         new MenuItem("quantize-100", "16 分音符"),
@@ -130,15 +130,17 @@ class MainFrame extends Frame {
         new MenuItem("quantize-100", "512 分音符"),
         new MenuItemSeparator(),
         new MenuItem("quantize-custom", "独自設定"),
-      ]);
-      this._toolBar._appendItem(btn);
-    }
-    {
-      let btn = new ToolBarButton("til", "", "TIL 0");
-      for(let i = 0; i < 16; ++i)
-        btn._appendItem(new MenuItem("til-" + i, "TIL " + i));
-      this._toolBar._appendItem(btn);
-    }
+      ],
+      (() => {
+        let x: any = [
+          new ToolBarButton("til", "", "TIL 0")
+        ];
+        for(let i = 0; i < 16; ++i)
+          x.push(new MenuItem("til-" + i, "TIL " + i));
+        return x;
+      })()
+    ]);
+    
     this._toolBar._eventOnItemClick = this._onCommand;
 
     this._toolBar._setCheckAll("pen", true);
