@@ -1,11 +1,13 @@
 import { Frame } from "./ui/frame";
 import { MenuBar, MenuItem, MenuItemSeparator, MenuItemSpacer, ContextMenu } from "./ui/menu";
 import { ToolBar, ToolBarButton, ToolBarButtonSeparator } from "./ui/toolbar";
+import { ChartView } from "./app-ui/chart-view";
 
 class MainFrame extends Frame {
   _menuBar?: MenuBar;
   _contextMenu?: ContextMenu;
   _toolBar?: ToolBar;
+  _chartView?: ChartView;
 
   _onInit() : void {
     console.log("init");
@@ -174,10 +176,23 @@ class MainFrame extends Frame {
       ]
     ]);
 
+    this._chartView = new ChartView(this);
+
     window.addEventListener("contextmenu", (e) => {
       this._contextMenu?._showPopup(e.clientX, e.clientY);
       e.preventDefault();
     });
+    
+    window.addEventListener("resize", (e) => {
+      this._chartView?._adjustLayout();
+    });
+
+    const frameCallback: FrameRequestCallback = (time) => {
+      this._onFrame();
+      requestAnimationFrame(frameCallback);
+    };
+    
+    requestAnimationFrame(frameCallback);
   }
 
   _onCommand(item: MenuItem) {
@@ -185,6 +200,10 @@ class MainFrame extends Frame {
     elm.style.textAlign = "center";
     elm.innerText = item._getId();
     document.getElementById("app")?.appendChild(elm);
+  }
+
+  _onFrame() {
+    this._chartView?._draw();
   }
 }
 
