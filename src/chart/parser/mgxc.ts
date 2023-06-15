@@ -59,6 +59,11 @@ export class ChartMgxcParser {
 
     ChartMgxcParser._lastParentNote = undefined;
     ChartMgxcParser._lastNote = undefined;
+
+    for(const note of chart._notes._childNodes) {
+      if (note instanceof Ug.Slide)
+        note._prepareSlideBg();
+    }
     return chart;
   }
 
@@ -395,6 +400,14 @@ export class ChartMgxcParser {
     }
     else if (noteName === "d") { note = new Ug.Damage; }
 
+    else if (noteName === "h") {
+      if (args[1] === "BG") note = new Ug.Hold;
+      else if (args[1] === "EN") {
+        note = new Ug.HoldChild;
+        isChildNote = true;
+      }
+    }
+
     else if (noteName === "s") {
       if (args[1] === "BG") note = new Ug.Slide;
       else if (args[1] === "ST" || args[1] === "EN") {
@@ -432,6 +445,31 @@ export class ChartMgxcParser {
 
       note = exNote;
       isPairNote = true;
+    }
+
+    else if (noteName === "H") {
+      if (args[1] === "BG") {
+        note = new Ug.AirHold;
+        isPairNote = true;
+        if (this._lastNote && this._lastNote instanceof Ug.Air) {
+          // 直前のノーツが AIR の場合は取り除く
+          let oldLastNote = this._lastNote;
+          this._lastNote._parentNode?._removeChild(this._lastNote);
+          this._lastNote = oldLastNote._getPair();
+        }
+      }
+      else if (args[1] === "ST" || args[1] === "EN") {
+        let exNote = new Ug.AirLongChild;
+        exNote._type = Ug.AirLongChildType.STEP;
+        note = exNote;
+        isChildNote = true;
+      }
+      else if (args[1] === "LC") {
+        let exNote = new Ug.AirLongChild;
+        exNote._type = Ug.AirLongChildType.CONTROL;
+        note = exNote;
+        isChildNote = true;
+      }
     }
 
     if (!note)

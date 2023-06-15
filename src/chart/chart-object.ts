@@ -11,7 +11,7 @@ export class ChartNode {
   protected _parent?: WeakRef<ChartNode>;
 
   get _childNodes() { return this._children; }
-  get _parentNode() { return this._parent; }
+  get _parentNode() { return this._parent?.deref(); }
   get _firstChild() : ChartNode|undefined { return this._children.length ? this._children[0] : undefined; }
   get _lastChild() : ChartNode|undefined { return this._children.length ? this._children[this._children.length - 1] : undefined; }
 

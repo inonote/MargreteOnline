@@ -160,7 +160,7 @@ export class ChartView {
   }
 
   _onMouseWheel(e: WheelEvent) {
-    this._viewState._scrollY += (e.deltaY > 0.0 ? -2.0 : 2.0) * SCROLLV_LINE / this._renderer._getZoomCoef();
+    this._viewState._scrollY += -e.deltaY / 40 * SCROLLV_LINE / this._renderer._getZoomCoef();
     if (this._viewState._scrollY < 0)
       this._viewState._scrollY = 0;
     this._dirty = true;

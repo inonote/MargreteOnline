@@ -40,12 +40,14 @@ export class AirSlide extends Note {
 
 
 
-export class AirLongAction extends Note {
-  _height: number = 0;
+export enum AirLongChildType {
+  STEP,
+  CONTROL
 }
 
 
 
-export class AirLongControl extends Note {
+export class AirLongChild extends Note {
+  _type: AirLongChildType = AirLongChildType.STEP;
   _height: number = 0;
 }
