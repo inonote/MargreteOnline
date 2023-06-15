@@ -1,22 +1,30 @@
 import { createDivElement } from "../ui/element-util";
 import { Frame } from "../ui/frame";
-import * as UgChart from "../chart/chart";
-import { ChartRenderer } from "./chart-render";
+import * as Ug from "../chart/chart";
+import { ChartRenderer } from "./chart-renderer";
+import { ChartMgxcParser } from "../chart/parser/mgxc";
+import { TEST_CHART } from "./test-chart";
+
+export const SCROLLV_LINE = 240;
 
 export class SelectRange {
   _isSelected: boolean = false;
   _beginX: number = 0;
-  _beginTick: UgChart.Tick = 0;
+  _beginTick: Ug.Tick = 0;
   _endX: number = 0;
-  _endTick: UgChart.Tick = 0;
+  _endTick: Ug.Tick = 0;
 }
+
+
 
 export class GhostNote {
   _isVisible: boolean = false;
   _x: number = 0;
-  _tick: UgChart.Tick = 0;
+  _tick: Ug.Tick = 0;
   width: number = 1;
 }
+
+
 
 export enum DragMode {
   DRAG_MODE_NONE = 0,
@@ -56,36 +64,38 @@ export enum DragMode {
 export class DragState {
   _isDragging: boolean = false;
   _mode: DragMode = DragMode.DRAG_MODE_NONE;
-  _targetNote?: UgChart.Note;
+  _targetNote?: Ug.Note;
   _targetOffsetMouseX: number = 0;
   _targetOffsetMouseY: number = 0;
   _startX: number = 0;
-  _startTick: UgChart.Tick = 0;
+  _startTick: Ug.Tick = 0;
   _startHeight: number = 0;
 }
+
+
 
 export class ChartViewState {
   _screenWidth: number = 0;
   _screenHeight: number = 0;
 
-  _cursorTick: UgChart.Tick = 0;
-  _playbackSeek: UgChart.Tick = 0;
+  _cursorTick: Ug.Tick = 0;
+  _playbackSeek: Ug.Tick = 0;
   _isPlaying: boolean = false;
 
-  _snapTick: UgChart.Tick = 480;
+  _snapTick: Ug.Tick = 480;
 
-  _scrollY: UgChart.Tick = 0;
-  _lastTick: UgChart.Tick = 0;
+  _scrollY: Ug.Tick = 0;
+  _lastTick: Ug.Tick = 0;
 
   _zoomLevel: number = 0;
 
   _selectRange: SelectRange = new SelectRange();
   _selectRangeBegin: SelectRange = new SelectRange();
-  _selectedNotes: UgChart.Note[] = [];
-  _oldSelectedNotePos: UgChart.NotePosition[] = [];
+  _selectedNotes: Ug.Note[] = [];
+  _oldSelectedNotePos: Ug.NotePosition[] = [];
   
-  _selectedNotesIndividual: UgChart.Note[] = [];
-  _oldSelectedNotePosIndividual: UgChart.NotePosition[] = [];
+  _selectedNotesIndividual: Ug.Note[] = [];
+  _oldSelectedNotePosIndividual: Ug.NotePosition[] = [];
 
   _lastNoteWidth: number = 4;
   _isVisibledControlNotes: boolean = true;
@@ -101,6 +111,8 @@ export class ChartViewState {
 	canZoomOut() : boolean { return this._zoomLevel > 0; }
 }
 
+
+
 export class ChartView {
   protected _frame: Frame;
 
@@ -109,8 +121,11 @@ export class ChartView {
 
   protected _dirty: boolean = true;
 
+  protected _chart: Ug.Chart = new Ug.Chart();
   protected _viewState: ChartViewState = new ChartViewState();
-  protected _renderer: ChartRenderer = new ChartRenderer(this._viewState);
+  protected _renderer: ChartRenderer;
+
+  protected _windowScale: number = 1.0;
 
   constructor(frame: Frame) {
     this._frame = frame;
@@ -121,23 +136,51 @@ export class ChartView {
     this._elmCanvas = document.createElement("canvas");
     this._elmSizeTracer.appendChild(this._elmCanvas);
     this._adjustLayout();
+
+    this._elmCanvas.addEventListener("wheel", e => this._onMouseWheel(e));
+
+    let chart = ChartMgxcParser._parse(TEST_CHART);
+    console.log(chart);
+    this._chart = chart || new Ug.Chart();
+    this._renderer = new ChartRenderer(this._viewState, this._chart);
   }
 
   _adjustLayout() {
-    this._elmCanvas.width = this._elmSizeTracer.clientWidth;
-    this._elmCanvas.height = this._elmSizeTracer.clientHeight;
+    this._windowScale = window.devicePixelRatio || 1.0;
+    this._elmCanvas.style.width = this._elmSizeTracer.clientWidth + "px";
+    this._elmCanvas.style.height = this._elmSizeTracer.clientHeight + "px";
+    
+    let newCanvasWidth = this._elmSizeTracer.clientWidth * this._windowScale;
+    let newCanvasHeight = this._elmSizeTracer.clientHeight * this._windowScale;
+    if (this._elmCanvas.width !== newCanvasHeight || this._elmCanvas.height !== newCanvasHeight) {
+      this._elmCanvas.width = this._elmSizeTracer.clientWidth * this._windowScale;
+      this._elmCanvas.height = this._elmSizeTracer.clientHeight * this._windowScale;
+      this._dirty = true;
+    }
+  }
+
+  _onMouseWheel(e: WheelEvent) {
+    this._viewState._scrollY += (e.deltaY > 0.0 ? -2.0 : 2.0) * SCROLLV_LINE / this._renderer._getZoomCoef();
+    if (this._viewState._scrollY < 0)
+      this._viewState._scrollY = 0;
+    this._dirty = true;
   }
 
   _draw() {
-    this._viewState._screenWidth = this._elmCanvas.width;
-    this._viewState._screenHeight = this._elmCanvas.height;
+    this._viewState._screenWidth = this._elmSizeTracer.clientWidth;
+    this._viewState._screenHeight = this._elmSizeTracer.clientHeight;
 
     if (!this._dirty)
       return;
+    this._dirty = false;
     
     let ctx = this._elmCanvas.getContext("2d");
-    if (ctx)
-      this._renderer._draw(ctx);
+    if (!ctx)
+      return;
+    
+    ctx.resetTransform();
+    ctx.scale(this._windowScale, this._windowScale);
+    this._renderer._draw(ctx);
   }
   
 }

@@ -206,4 +206,9 @@ html, body {
 
 .ui-chart-view {
   height: 100%;
+  position: relative;
+}
+
+.ui-chart-view > canvas {
+  position: absolute;
 }

@@ -15,10 +15,12 @@ class MainFrame extends Frame {
     this._menuBar._appendNestedMenuItems([
       [
         "ファイル",
-        new MenuItem("sync", "譜面の同期"),
+        new MenuItem("sync", "データの同期"),
         new MenuItemSeparator(),
         new MenuItem("open", "開く", "Ctrl + O"),
         new MenuItem("save", "上書き保存", "Ctrl + S"),
+        new MenuItemSeparator(),
+        new MenuItem("chart-prop", "譜面情報の編集"),
       ],
       [
         "編集",
@@ -106,15 +108,19 @@ class MainFrame extends Frame {
 
     this._toolBar = new ToolBar(this);
     this._toolBar._appendNestedMenuItems([
-      new ToolBarButton("sync", "arrow-repeat", "譜面の同期"),
+      new ToolBarButton("sync", "arrow-repeat", "データの同期"),
       new ToolBarButtonSeparator(),
       new ToolBarButton("open", "folder2", "開く"),
       new ToolBarButton("save", "save", "上書き保存"),
       new ToolBarButtonSeparator(),
+      new ToolBarButton("undo", "arrow-90deg-left", "元に戻す"),
+      new ToolBarButton("redo", "arrow-90deg-right", "やり直す"),
+      new ToolBarButtonSeparator(),
       new ToolBarButton("cut-notes", "scissors", "切り取り"),
       new ToolBarButton("copy-notes", "files", "コピー"),
       new ToolBarButton("paste", "clipboard-fill", "貼り付け"),
-      new ToolBarButton("delete-notes", "x-lg", "削除"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("play", "play-fill", "再生"),
       new ToolBarButtonSeparator(),
       new ToolBarButton("pen", "pencil-fill", "ペン"),
       new ToolBarButton("eraser", "eraser-fill", "消しゴム"),
@@ -196,10 +202,6 @@ class MainFrame extends Frame {
   }
 
   _onCommand(item: MenuItem) {
-    let elm = document.createElement("div");
-    elm.style.textAlign = "center";
-    elm.innerText = item._getId();
-    document.getElementById("app")?.appendChild(elm);
   }
 
   _onFrame() {
