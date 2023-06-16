@@ -32,8 +32,6 @@ export enum ExTapDirection {
 	OUTIN
 }
 
-
-
 export class ExTap extends Note {
   _direction: ExTapDirection = ExTapDirection.UP;
 
@@ -47,8 +45,6 @@ export enum FlickDirection {
   LEFT,
   RIGHT
 }
-
-
 
 export class Flick extends Note {
   _direction: FlickDirection = FlickDirection.AUTO;
@@ -127,8 +123,6 @@ export enum SlideChildType {
   CONTROL,
   CURVE_CONTROL
 }
-
-
 
 export class SlideChild extends Note {
   _type: SlideChildType = SlideChildType.STEP;

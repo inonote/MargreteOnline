@@ -65,20 +65,21 @@ export const CHART_FIELD_FONT_UI                  = "12px system-ui";
 export const AIR_WIDTH_RATIO = [ 0, 0.40, 0.50, 0.63, 0.69, 0.70, 0.70, 0.73, 0.75, 0.765, 0.78, 0.795, 0.81, 0.825, 0.84, 0.855, 0.87 ];
 
 export const CHART_FIELD_COLOR_AIR_CRUSH_CUSTOM = [
-  0x0000E3,
-  0x00B6E3,
-  0x00FFF6,
-  0x04E300,
-  0xE3DB00,
-  0xE02F3B,
-  0xE3007D,
-  0xC400D9,
-  0x000000,
-  0xFFFFFF,
-  0x4D4846,
-  0x00FF99,
-  0xFFB300,
-  0xFF8D00
+  CHART_FIELD_COLOR_AIR_CRUSH_CENTER,
+  MathUtil.ColorRefToCSS(0x0000E3),
+  MathUtil.ColorRefToCSS(0x00B6E3),
+  MathUtil.ColorRefToCSS(0x00FFF6),
+  MathUtil.ColorRefToCSS(0x04E300),
+  MathUtil.ColorRefToCSS(0xE3DB00),
+  MathUtil.ColorRefToCSS(0xE02F3B),
+  MathUtil.ColorRefToCSS(0xE3007D),
+  MathUtil.ColorRefToCSS(0xC400D9),
+  MathUtil.ColorRefToCSS(0x000000),
+  MathUtil.ColorRefToCSS(0xFFFFFF),
+  MathUtil.ColorRefToCSS(0x4D4846),
+  MathUtil.ColorRefToCSS(0x00FF99),
+  MathUtil.ColorRefToCSS(0xFFB300),
+  MathUtil.ColorRefToCSS(0xFF8D00)
 ];
 
 
@@ -157,12 +158,17 @@ export class ChartRenderer {
 
     this._drawGroundedLongBg(ctx, rm);
     this._drawAirHoldBg(ctx, rm);
-
+    this._drawAirSlideBg(ctx, rm);
+    this._drawAirCrushBg(ctx, rm);
+    
+		this._drawAir(ctx, rm);
 		this._drawGroundedLongNotes(ctx, rm);
 		this._drawGroundedShortNotes(ctx, rm);
     this._drawAirHoldNotes(ctx, rm);
-    
-		this._drawAir(ctx, rm);
+    this._drawAirSlideNotes(ctx, rm);
+    this._drawAirCrushNotes(ctx, rm);
+
+    this._drawNoteAttributes(ctx, rm);
   }
 
   private _drawLaneLines(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
@@ -310,6 +316,29 @@ export class ChartRenderer {
   }
 
   private _drawEvents(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    // BPM
+    for(const e of this._chart._events._childNodes) {
+      if (!(e instanceof Ug.EventSpeedModifier))
+        continue;
+      
+      if (e._tick < rm._visibleRangeBegin || e._tick > rm._visibleRangeEnd)
+        continue;
+
+      let y = ChartRenderer._calcFieldYFromTick(rm, e._tick);
+      ctx.font = CHART_FIELD_FONT_UI;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "end";
+      ctx.fillStyle = CHART_FIELD_COLOR_BORDER;
+      ctx.fillText(e._speed.toFixed(3), rm._rect._right + CHART_FIELD_EVENT_TEXT_WIDTH * 3 - CHART_FIELD_TEXT_MARGIN_X, y - CHART_FIELD_TEXT_HEIGHT - CHART_FIELD_TEXT_MARGIN_Y);
+      
+      canvasDrawLine(
+        ctx,
+        rm._rect._right, y,
+        rm._rect._right + CHART_FIELD_EVENT_TEXT_WIDTH * 3, y,
+        CHART_FIELD_COLOR_BORDER,
+        CHART_FIELD_LINE_WIDTH);
+    }
+
     // TIL
     for(const e of this._chart._events._childNodes) {
       if (!(e instanceof Ug.EventTimeline))
@@ -357,6 +386,78 @@ export class ChartRenderer {
     }
   }
 
+  private _drawNoteAttributes(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    for (const note of this._chart._notes._childNodes as Ug.Note[]) {
+      if (note._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        continue;
+      if (note instanceof Ug.ExTap) {
+        let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+        let buf = "";
+        switch (note._direction) {
+        case Ug.ExTapDirection.DOWN:
+          buf = "D";
+          break;
+        case Ug.ExTapDirection.CENTER:
+          buf = "C";
+          break;
+        case Ug.ExTapDirection.ROTATE_LEFT:
+          buf = "RL";
+          break;
+        case Ug.ExTapDirection.ROTATE_RIGHT:
+          buf = "RR";
+          break;
+        case Ug.ExTapDirection.LEFT:
+          buf = "L";
+          break;
+        case Ug.ExTapDirection.RIGHT:
+          buf = "R";
+          break;
+        case Ug.ExTapDirection.INOUT:
+          buf = "IO";
+          break;
+        case Ug.ExTapDirection.OUTIN:
+          buf = "OI";
+          break;
+        default:
+          buf = "U";
+          break;
+        }
+
+        ctx.font = "bold " + CHART_FIELD_FONT_UI;
+        ctx.textBaseline = "top";
+        ctx.textAlign = "start";
+        ctx.fillStyle = CHART_FIELD_COLOR_ORANGE;
+        ctx.fillText(
+          buf,
+          MathUtil.mix(rm._rect._left, rm._rect._right, note._x / 16.0) + 6.0, y - CHART_FIELD_TEXT_HEIGHT - CHART_FIELD_TEXT_MARGIN_Y,
+          y - CHART_FIELD_TEXT_HEIGHT - CHART_FIELD_TEXT_MARGIN_Y);
+      }
+      else if (note instanceof Ug.Flick) {
+        let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+        let buf = "";
+        switch (note._direction) {
+        case Ug.FlickDirection.LEFT:
+          buf = "L";
+          break;
+        case Ug.FlickDirection.RIGHT:
+          buf = "R";
+          break;
+        }
+        if (buf !== "") {
+          ctx.font = "bold " + CHART_FIELD_FONT_UI;
+          ctx.textBaseline = "top";
+          ctx.textAlign = "start";
+          ctx.fillStyle = CHART_FIELD_COLOR_ORANGE;
+          ctx.fillText(
+            buf,
+            MathUtil.mix(rm._rect._left, rm._rect._right, note._x / 16.0) + 6.0, y - CHART_FIELD_TEXT_HEIGHT - CHART_FIELD_TEXT_MARGIN_Y,
+            y - CHART_FIELD_TEXT_HEIGHT - CHART_FIELD_TEXT_MARGIN_Y);
+        }
+      }
+    }
+
+  }
+
   private _drawGroundedLongBg(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
     for(const note of this._chart._notes._childNodes as Ug.Note[]) {
       if (!note._isGroundedLong() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
@@ -370,12 +471,14 @@ export class ChartRenderer {
         
         let gradient = ctx.createLinearGradient(0, beginY, 0, endY);
         gradient.addColorStop(0.0, CHART_FIELD_COLOR_HOLD_BG_3);
-        gradient.addColorStop(0.25, CHART_FIELD_COLOR_HOLD_BG_2);
-        gradient.addColorStop(0.75, CHART_FIELD_COLOR_HOLD_BG_2);
+        gradient.addColorStop(0.375, CHART_FIELD_COLOR_HOLD_BG_2);
+        gradient.addColorStop(0.625, CHART_FIELD_COLOR_HOLD_BG_2);
         gradient.addColorStop(1.0, CHART_FIELD_COLOR_HOLD_BG_1);
         ctx.fillStyle = gradient;
 
+        ctx.globalAlpha = 0.672;
         ctx.fillRect(left, beginY, right - left, endY - beginY);
+        ctx.globalAlpha = 1.0;
       }
       else if (note instanceof Ug.Slide) {
         let isFirst = true;
@@ -412,13 +515,15 @@ export class ChartRenderer {
 
             let gradient = ctx.createLinearGradient(0, bgVertices[bgVertices.length - 1], 0, bgVertices[2]);
             gradient.addColorStop(0.0, CHART_FIELD_COLOR_SLIDE_BG_1);
-            gradient.addColorStop(0.25, CHART_FIELD_COLOR_SLIDE_BG_2);
-            gradient.addColorStop(0.75, CHART_FIELD_COLOR_SLIDE_BG_2);
+            gradient.addColorStop(0.375, CHART_FIELD_COLOR_SLIDE_BG_2);
+            gradient.addColorStop(0.625, CHART_FIELD_COLOR_SLIDE_BG_2);
             gradient.addColorStop(1.0, CHART_FIELD_COLOR_SLIDE_BG_3);
             ctx.fillStyle = gradient;
 
+            ctx.globalAlpha = 0.672;
             ctx.closePath();
             ctx.fill();
+            ctx.globalAlpha = 1.0;
             
             ctx.beginPath();
             ctx.moveTo(centerVertices[0], centerVertices[2]);
@@ -436,16 +541,6 @@ export class ChartRenderer {
             --vertexIndex;
           }
         }
-
-        if (note._tick >= rm._visibleRangeBegin && note._tick <= rm._visibleRangeEnd &&
-            note._timelineId == this._state._activeTimelineId)
-          ChartRenderer._drawTap(ctx, rm, note);
-
-        for(const child of note._childNodes as Ug.Note[]) {
-          if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
-            child._timelineId == this._state._activeTimelineId)
-            ChartRenderer._drawTap(ctx, rm, child);
-        }
       }
       
     }
@@ -457,15 +552,168 @@ export class ChartRenderer {
       if (!(note instanceof Ug.AirHold) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
         continue;
       
-      
       let centerX = rm._rect._left + rm._rect._width * (note._x + note._width / 2.0) / 16.0 - 1.5;
       let beginY = ChartRenderer._calcFieldYFromTick(rm, note._tick);
-      let endY = ChartRenderer._calcFieldYFromTick(rm, (note._firstChild as Ug.HoldChild)._tick);
+      let endY = ChartRenderer._calcFieldYFromTick(rm, (note._lastChild as Ug.HoldChild)._tick);
       
       ctx.fillStyle = CHART_FIELD_COLOR_AIR_UP;
       ctx.fillRect(
         centerX - CHART_FIELD_SLIDE_CENTER_X, beginY,
         CHART_FIELD_SLIDE_CENTER_X * 2, endY - beginY);
+
+      // 側面図
+      ctx.beginPath();
+      ctx.moveTo(
+        MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES),
+        beginY);
+      ctx.lineTo(
+        MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES),
+        endY);
+      ctx.strokeStyle = CHART_FIELD_COLOR_AIR_UP;
+      ctx.lineWidth = CHART_FIELD_SLIDE_CENTER_X;
+      ctx.stroke();
+    }
+
+  }
+
+  private _drawAirSlideBg(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+      if (!(note instanceof Ug.AirSlide) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        continue;
+
+      /* [ left, right, y ] */
+      let bgVertices: number[] = [];
+      let centerVertices: number[] = [];
+      
+      let left = note._x / 16.0;
+      let right = (note._x + note._width) / 16.0;
+      bgVertices.push(
+        rm._rect._left + rm._rect._width * left + 1.5,
+        rm._rect._left + rm._rect._width * right - 1.5,
+        ChartRenderer._calcFieldYFromTick(rm, note._tick));
+
+      let beginCenterX = rm._rect._left + rm._rect._width * (left + right) / 2.0;
+      centerVertices.push(
+        beginCenterX - CHART_FIELD_SLIDE_CENTER_X,
+        beginCenterX + CHART_FIELD_SLIDE_CENTER_X,
+        ChartRenderer._calcFieldYFromTick(rm, note._tick));
+
+      for(const childNote of note._childNodes as Ug.AirAction[]) {
+        left = childNote._x / 16.0;
+        right = (childNote._x + childNote._width) / 16.0;
+        bgVertices.push(
+          rm._rect._left + rm._rect._width * left + 1.5,
+          rm._rect._left + rm._rect._width * right - 1.5,
+          ChartRenderer._calcFieldYFromTick(rm, childNote._tick));
+          
+        beginCenterX = rm._rect._left + rm._rect._width * (left + right) / 2.0;
+        centerVertices.push(
+          beginCenterX - CHART_FIELD_SLIDE_CENTER_X,
+          beginCenterX + CHART_FIELD_SLIDE_CENTER_X,
+          ChartRenderer._calcFieldYFromTick(rm, childNote._tick));
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(bgVertices[0], bgVertices[2]);
+      for(let i = 3; i < bgVertices.length; i += 3)
+        ctx.lineTo(bgVertices[i], bgVertices[i + 2]);
+      for(let i = bgVertices.length - 3; i >= 0; i -= 3)
+        ctx.lineTo(bgVertices[i + 1], bgVertices[i + 2]);
+      
+      ctx.fillStyle = CHART_FIELD_COLOR_AIR_UP;
+      ctx.globalAlpha = 0.25;
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+          
+      ctx.beginPath();
+      ctx.moveTo(centerVertices[0], centerVertices[2]);
+      for(let i = 3; i < centerVertices.length; i += 3)
+        ctx.lineTo(centerVertices[i], centerVertices[i + 2]);
+      for(let i = centerVertices.length - 3; i >= 0; i -= 3)
+        ctx.lineTo(centerVertices[i + 1], centerVertices[i + 2]);
+      ctx.fillStyle = CHART_FIELD_COLOR_SLIDE_CENTER;
+      ctx.closePath();
+      ctx.fill();
+
+      // 側面図
+      ctx.beginPath();
+      ctx.moveTo(
+        MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES),
+        ChartRenderer._calcFieldYFromTick(rm, note._tick));
+      for(const childNote of note._childNodes as Ug.AirAction[]) {
+        if (childNote._type === Ug.AirActionType.STEP && note._lastChild !== childNote)
+          continue;
+
+        ctx.lineTo(
+          MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, childNote._height / CHART_FIELD_SIDEVIEW_LANES),
+          ChartRenderer._calcFieldYFromTick(rm, childNote._tick));
+      }
+      ctx.strokeStyle = CHART_FIELD_COLOR_SLIDE_CENTER;
+      ctx.lineWidth = CHART_FIELD_SLIDE_CENTER_X;
+      ctx.stroke();
+
+    }
+
+  }
+
+  private _drawAirCrushBg(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+      if (!(note instanceof Ug.AirCrush) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        continue;
+      
+      if (note._variationId !== Ug.VARIDATION_TRANSPARENT) {
+        /* [ left, right, y ] */
+        let centerVertices: number[] = [];
+        
+        let left = note._x / 16.0;
+        let right = (note._x + note._width) / 16.0;
+        let beginCenterX = rm._rect._left + rm._rect._width * (left + right) / 2.0;
+        centerVertices.push(
+          beginCenterX - CHART_FIELD_SLIDE_CENTER_X,
+          beginCenterX + CHART_FIELD_SLIDE_CENTER_X,
+          ChartRenderer._calcFieldYFromTick(rm, note._tick));
+
+        for(const childNote of note._childNodes as Ug.AirCrushAction[]) {
+          if (childNote._type === Ug.AirCrushActionType.STEP && note._lastChild !== childNote)
+            continue;
+
+          left = childNote._x / 16.0;
+          right = (childNote._x + childNote._width) / 16.0;
+          beginCenterX = rm._rect._left + rm._rect._width * (left + right) / 2.0;
+          centerVertices.push(
+            beginCenterX - CHART_FIELD_SLIDE_CENTER_X,
+            beginCenterX + CHART_FIELD_SLIDE_CENTER_X,
+            ChartRenderer._calcFieldYFromTick(rm, childNote._tick));
+        }
+            
+        ctx.beginPath();
+        ctx.moveTo(centerVertices[0], centerVertices[2]);
+        for(let i = 3; i < centerVertices.length; i += 3)
+          ctx.lineTo(centerVertices[i], centerVertices[i + 2]);
+        for(let i = centerVertices.length - 3; i >= 0; i -= 3)
+          ctx.lineTo(centerVertices[i + 1], centerVertices[i + 2]);
+        ctx.fillStyle = CHART_FIELD_COLOR_AIR_CRUSH_CUSTOM[note._variationId] || CHART_FIELD_COLOR_AIR_CRUSH_CENTER;
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 側面図
+      ctx.beginPath();
+      ctx.moveTo(
+        MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES),
+        ChartRenderer._calcFieldYFromTick(rm, note._tick));
+      for(const childNote of note._childNodes as Ug.AirCrushAction[]) {
+        if (childNote._type === Ug.AirCrushActionType.STEP && note._lastChild !== childNote)
+          continue;
+
+        ctx.lineTo(
+          MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, childNote._height / CHART_FIELD_SIDEVIEW_LANES),
+          ChartRenderer._calcFieldYFromTick(rm, childNote._tick));
+      }
+      ctx.strokeStyle = CHART_FIELD_COLOR_AIR_CRUSH_CUSTOM[note._variationId] || CHART_FIELD_COLOR_AIR_CRUSH_CENTER;
+      ctx.lineWidth = CHART_FIELD_SLIDE_CENTER_X;
+      ctx.stroke();
     }
 
   }
@@ -509,11 +757,85 @@ export class ChartRenderer {
         if (note._width !== w || !(note instanceof Ug.AirHold) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
           continue;
         
+        if (note._timelineId == this._state._activeTimelineId)
+          ChartRenderer._sideViewDrawAirPoint(ctx, rm, note);
+        
         for(const child of note._childNodes as Ug.Note[]) {
           if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
-            child._timelineId == this._state._activeTimelineId)
-            ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirLongChild);
+            child._timelineId == this._state._activeTimelineId) {
+              ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirAction);
+              ChartRenderer._sideViewDrawAirPoint(ctx, rm, child as Ug.AirAction);
+          }
         }
+      }
+    }
+  
+  }
+
+  private _drawAirSlideNotes(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !(note instanceof Ug.AirSlide) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+
+        if (note._timelineId == this._state._activeTimelineId)
+          ChartRenderer._sideViewDrawAirPoint(ctx, rm, note);
+        
+        for(const child of note._childNodes as Ug.Note[]) {
+          if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+            child._timelineId == this._state._activeTimelineId) {
+            ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirAction);
+            ChartRenderer._sideViewDrawAirPoint(ctx, rm, child as Ug.AirAction);
+          }
+        }
+      }
+    }
+  
+  }
+
+  private _drawAirCrushNotes(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !(note instanceof Ug.AirCrush) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+        
+        if (note._tick >= rm._visibleRangeBegin && note._tick <= rm._visibleRangeEnd &&
+          note._timelineId == this._state._activeTimelineId) {
+          ChartRenderer._drawAirCrushAction(ctx, rm, note, note._x + note._width / 2.0, note._width);
+          ChartRenderer._sideViewDrawAirPoint(ctx, rm, note);
+        }
+        
+        let queue: Ug.AirCrushAction[] = [];
+        let lastControlNote: Ug.AirCrush|Ug.AirCrushAction = note;
+        for(const child of note._childNodes as Ug.AirCrushAction[]) {
+          if (child._type === Ug.AirCrushActionType.STEP && note._lastChild !== child) {
+            queue.push(child);
+          }
+          else {
+            for(const queueNote of queue) {
+              let pt = MathUtil.relative(lastControlNote._tick, child._tick, queueNote._tick);
+              if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+                queueNote._timelineId === this._state._activeTimelineId) {
+
+                ChartRenderer._drawAirCrushAction(
+                  ctx, rm, queueNote,
+                  MathUtil.mix(lastControlNote._x + lastControlNote._width / 2.0, child._x + child._width / 2.0, pt),
+                  MathUtil.mix(lastControlNote._width, child._width, pt));
+              }
+            }
+
+            queue = [];
+            if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+              child._timelineId == this._state._activeTimelineId) {
+              ChartRenderer._drawAirCrushAction(ctx, rm, child, child._x + child._width / 2.0, child._width);
+              ChartRenderer._sideViewDrawAirPoint(ctx, rm, child);
+            }
+            
+            lastControlNote = child;
+
+          }
+        }
+
       }
     }
   
@@ -631,9 +953,9 @@ export class ChartRenderer {
     else if (note instanceof Ug.Damage)
       ctx.fillStyle = CHART_FIELD_COLOR_DAMAGE;
     else if (note instanceof Ug.Slide || note instanceof Ug.SlideChild)
-      ctx.fillStyle = CHART_FIELD_COLOR_SLIDE_STEP;
+      ctx.fillStyle = note._getPair()?._isAir() ? CHART_FIELD_COLOR_AIR_UP : CHART_FIELD_COLOR_SLIDE_STEP;
     else if (note instanceof Ug.Hold || note instanceof Ug.HoldChild)
-      ctx.fillStyle = CHART_FIELD_COLOR_HOLD_STEP;
+      ctx.fillStyle = note._getPair()?._isAir() ? CHART_FIELD_COLOR_AIR_UP : CHART_FIELD_COLOR_HOLD_STEP;
 
     ctx.beginPath();
     if (note instanceof Ug.Damage) {
@@ -675,7 +997,7 @@ export class ChartRenderer {
     }
   }
 
-  private static _drawAirAction(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirLongChild) {
+  private static _drawAirAction(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirAction) {
     let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
 
     ctx.beginPath();
@@ -683,8 +1005,62 @@ export class ChartRenderer {
       MathUtil.mixi(rm._rect._left, rm._rect._right, note._x / 16.0) + 1.0, y - CHART_FIELD_AIR_ACTION_NOTE_HEIGHT / 2.0,
       note._width / 16.0 * rm._rect._width - 2.0, CHART_FIELD_AIR_ACTION_NOTE_HEIGHT);
     
-    if (note._type === Ug.AirLongChildType.STEP) {
+    if (note._type === Ug.AirActionType.STEP) {
       ctx.fillStyle = CHART_FIELD_COLOR_AIR_ACTION;
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = CHART_FIELD_COLOR_BORDER;
+    ctx.lineWidth = CHART_FIELD_LINE_WIDTH;
+    ctx.stroke();
+  }
+
+  private static _sideViewDrawAirPoint(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirHold|Ug.AirSlide|Ug.AirAction|Ug.AirCrush|Ug.AirCrushAction) {
+    let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+
+    ctx.beginPath();
+    ctx.rect(
+      MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES) - CHART_FIELD_SIDEVIEW_NOTE_WIDTH / 2.0, y - CHART_FIELD_SIDEVIEW_NOTE_HEIGHT / 2.0,
+		  CHART_FIELD_SIDEVIEW_NOTE_WIDTH, CHART_FIELD_SIDEVIEW_NOTE_HEIGHT);
+    
+    if (note instanceof Ug.AirAction && note._type === Ug.AirActionType.STEP) {
+      ctx.fillStyle = CHART_FIELD_COLOR_AIR_ACTION;
+      ctx.fill();
+    }
+    else if ((note instanceof Ug.AirCrush && !note._noAction) || (note instanceof Ug.AirCrushAction && note._type === Ug.AirCrushActionType.STEP)) {
+      ctx.fillStyle = CHART_FIELD_COLOR_AIR_CRUSH;
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = CHART_FIELD_COLOR_BORDER;
+    ctx.lineWidth = CHART_FIELD_LINE_WIDTH;
+    ctx.stroke();
+  }
+
+  private static _drawAirCrushAction(ctx: CanvasRenderingContext2D, rm: RenderMeasures,
+    note: Ug.AirCrush|Ug.AirCrushAction, centerX: number, width: number) {
+    let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+
+    ctx.beginPath();
+    ctx.rect(
+      MathUtil.mixi(rm._rect._left, rm._rect._right, (centerX - width / 2.0) / 16.0) + 1.0, y - CHART_FIELD_AIR_ACTION_NOTE_HEIGHT / 2.0,
+      width / 16.0 * rm._rect._width - 2.0, CHART_FIELD_AIR_ACTION_NOTE_HEIGHT);
+    
+    if (note instanceof Ug.AirCrush && !note._noAction) {
+      ctx.fillStyle = CHART_FIELD_COLOR_AIR_CRUSH;
+      ctx.fill();
+
+      ctx.strokeStyle = CHART_FIELD_COLOR_AIR_CRUSH_EMP;
+      ctx.lineWidth = CHART_FIELD_LINE_WIDTH;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.rect(
+        MathUtil.mixi(rm._rect._left, rm._rect._right, (centerX - width / 2.0) / 16.0), y - CHART_FIELD_AIR_ACTION_NOTE_HEIGHT / 2.0 - 1.0,
+        width / 16.0 * rm._rect._width, CHART_FIELD_AIR_ACTION_NOTE_HEIGHT + 2.0);
+    }
+    else if (note instanceof Ug.AirCrushAction && note._type === Ug.AirCrushActionType.STEP) {
+      ctx.fillStyle = CHART_FIELD_COLOR_AIR_CRUSH;
       ctx.fill();
     }
 

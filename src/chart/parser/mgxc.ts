@@ -388,7 +388,22 @@ export class ChartMgxcParser {
     let noteName = args[0].substr(-1);
 
     if (noteName === "t") { note = new Ug.Tap; }
-    else if (noteName === "e") { note = new Ug.ExTap; }
+    else if (noteName === "e") {
+      let exNote = new Ug.ExTap;
+
+      if (args[2] == "U") exNote._direction = Ug.ExTapDirection.UP;
+      else if (args[2] == "D") exNote._direction = Ug.ExTapDirection.DOWN;
+      else if (args[2] == "C") exNote._direction = Ug.ExTapDirection.CENTER;
+      else if (args[2] == "L") exNote._direction = Ug.ExTapDirection.LEFT;
+      else if (args[2] == "R") exNote._direction = Ug.ExTapDirection.RIGHT;
+      else if (args[2] == "RL") exNote._direction = Ug.ExTapDirection.ROTATE_LEFT;
+      else if (args[2] == "RR") exNote._direction = Ug.ExTapDirection.ROTATE_RIGHT;
+      else if (args[2] == "IO") exNote._direction = Ug.ExTapDirection.INOUT;
+      else if (args[2] == "OI") exNote._direction = Ug.ExTapDirection.OUTIN;
+      else exNote._direction = Ug.ExTapDirection.UP;
+
+      note = exNote;
+    }
     else if (noteName === "f") {
       let exNote = new Ug.Flick;
 
@@ -449,24 +464,92 @@ export class ChartMgxcParser {
 
     else if (noteName === "H") {
       if (args[1] === "BG") {
-        note = new Ug.AirHold;
+        let exNote = new Ug.AirHold;
         isPairNote = true;
         if (this._lastNote && this._lastNote instanceof Ug.Air) {
           // 直前のノーツが AIR の場合は取り除く
           let oldLastNote = this._lastNote;
           this._lastNote._parentNode?._removeChild(this._lastNote);
           this._lastNote = oldLastNote._getPair();
+          exNote._inverted = (oldLastNote as Ug.Air)._inverted;
         }
+
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
       }
       else if (args[1] === "ST" || args[1] === "EN") {
-        let exNote = new Ug.AirLongChild;
-        exNote._type = Ug.AirLongChildType.STEP;
+        let exNote = new Ug.AirAction;
+        exNote._type = Ug.AirActionType.STEP;
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
+        isChildNote = true;
+      }
+      else if (args[1] === "LC" || args[1] === "EX") {
+        let exNote = new Ug.AirAction;
+        exNote._type = Ug.AirActionType.CONTROL;
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
+        isChildNote = true;
+      }
+    }
+
+    else if (noteName === "S") {
+      if (args[1] === "BG") {
+        let exNote = new Ug.AirSlide;
+        isPairNote = true;
+        if (this._lastNote && this._lastNote instanceof Ug.Air) {
+          // 直前のノーツが AIR の場合は取り除く
+          let oldLastNote = this._lastNote;
+          this._lastNote._parentNode?._removeChild(this._lastNote);
+          this._lastNote = oldLastNote._getPair();
+          exNote._inverted = (oldLastNote as Ug.Air)._inverted;
+        }
+
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
+      }
+      else if (args[1] === "ST" || args[1] === "EN") {
+        let exNote = new Ug.AirAction;
+        exNote._type = Ug.AirActionType.STEP;
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
+        isChildNote = true;
+      }
+      else if (args[1] === "LC" || args[1] === "EX") {
+        let exNote = new Ug.AirAction;
+        exNote._type = Ug.AirActionType.CONTROL;
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
+        isChildNote = true;
+      }
+    }
+
+    else if (noteName === "C") {
+      if (args[1] === "BG") {
+        let exNote = new Ug.AirCrush;
+        exNote._noAction = args[3] !== "AT";
+        exNote._variationId = parseInt(args[9], 10);
+        exNote._height = parseInt(args[7], 10);
+
+        note = exNote;
+      }
+      else if (args[1] === "ST") {
+        let exNote = new Ug.AirCrushAction;
+        exNote._type = Ug.AirCrushActionType.STEP;
         note = exNote;
         isChildNote = true;
       }
       else if (args[1] === "LC") {
-        let exNote = new Ug.AirLongChild;
-        exNote._type = Ug.AirLongChildType.CONTROL;
+        let exNote = new Ug.AirCrushAction;
+        exNote._type = Ug.AirCrushActionType.CONTROL;
+        exNote._height = parseInt(args[7], 10);
+        note = exNote;
+        isChildNote = true;
+      }
+      else if (args[1] === "EN") {
+        let exNote = new Ug.AirCrushAction;
+        exNote._type = args[3] === "AT" ? Ug.AirCrushActionType.STEP : Ug.AirCrushActionType.CONTROL;
+        exNote._height = parseInt(args[7], 10);
         note = exNote;
         isChildNote = true;
       }
@@ -475,10 +558,10 @@ export class ChartMgxcParser {
     if (!note)
       return false;
     
-    note._tick = parseInt(args[4]);
-    note._x = parseInt(args[5]);
-    note._width = parseInt(args[6]);
-    note._timelineId = parseInt(args[8]);
+    note._tick = parseInt(args[4], 10);
+    note._x = parseInt(args[5], 10);
+    note._width = parseInt(args[6], 10);
+    note._timelineId = parseInt(args[8], 10);
     
     if (isChildNote)
       ChartMgxcParser._lastParentNote?._appendChild(note);
