@@ -39,6 +39,7 @@ html, body {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none;
 }
 
 #app {
@@ -241,8 +242,10 @@ html, body {
 .ui-chart-view {
   height: 100%;
   position: relative;
+  pointer-events: none;
 }
 
 .ui-chart-view > canvas {
   position: absolute;
+  pointer-events: auto;
 }

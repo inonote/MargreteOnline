@@ -1,4 +1,4 @@
-import { Rect } from "../ui/util";
+import { Rect, Position } from "../ui/util";
 import { ChartViewState } from "./chart-view";
 import * as Ug from "../chart/chart";
 import * as MathUtil from "../math-util";
@@ -85,6 +85,38 @@ export const CHART_FIELD_COLOR_AIR_CRUSH_CUSTOM = [
 ];
 
 
+export enum HitTestTargetType {
+  NONE,
+  SCROLLBAR_THUMB
+}
+
+export class RendererCursorPosition {
+  _x: number = 0;
+  _leftX: number = 0;
+  _rightX: number = 0;
+  _realX: number = 0;
+  _height: number = 0;
+  _tick: Ug.Tick = 0;
+  _snappedTick: Ug.Tick = 0;
+}
+
+export class HitTestResult {
+  _targetType: HitTestTargetType = HitTestTargetType.NONE;
+  _target?: Ug.Note|ScrollBarMetrices;
+
+  _curPos: RendererCursorPosition = new RendererCursorPosition;
+  
+  _targetRect: Rect = new Rect;
+  _mousePos: Position = new Position;
+
+  _relativeX: number = 0.0;
+  _relativeY: number = 0.0;
+
+  _offsetMouseX: number = 0;
+  _offsetMouseY: number = 0;
+}
+
+
 
 export class RenderMeasures {
   _rect: Rect = new Rect();
@@ -92,6 +124,18 @@ export class RenderMeasures {
   _visibleRangeBegin: Ug.Tick = 0;
   _visibleRangeEnd: Ug.Tick = 0;
   _visibleRange: Ug.Tick = 0;
+}
+
+
+
+export class ScrollBarMetrices {
+  _thumbLength: number = 0; // つまみの長さ
+  _trackLength: number = 0; // 可動域
+  _thumbPos: number = 0;
+
+  _min: number = 0;
+  _max: number = 0;
+  _pos: number = 0;
 }
 
 
@@ -132,6 +176,51 @@ export class ChartRenderer {
     rm._visibleRangeEnd = rm._visibleRangeBegin + rm._visibleRange;
     return rm;
   }
+  
+  _calcScrollBarMetrices(rm: RenderMeasures) : ScrollBarMetrices {
+    let sbm = new ScrollBarMetrices;
+    sbm._min = 0;
+    sbm._max = this._state._lastTick;
+    sbm._pos = this._state._scrollY;
+    sbm._thumbLength = Math.max((rm._visibleRange / this._state._lastTick) * this._state._screenHeight, 32);
+    sbm._trackLength = this._state._screenHeight - sbm._thumbLength;
+    sbm._thumbPos = (1.0 - this._state._scrollY / this._state._lastTick) * sbm._trackLength;
+    return sbm;
+  }
+
+  // カーソル位置を取得する
+  _getCursorPosition(mouseX: number, mouseY: number) : RendererCursorPosition {
+    let rm = this._calcMeasures();
+
+    let pos = new RendererCursorPosition;
+    pos._tick = Math.max(MathUtil.mixi(rm._visibleRangeBegin, rm._visibleRangeEnd, MathUtil.relative(rm._rect._bottom, rm._rect._top, mouseY)), 0);
+    pos._realX = MathUtil.relative(rm._rect._left, rm._rect._right, mouseX) * 16.0;
+    let xfl = Math.min(Math.max(pos._realX, 0.0), 15.0);
+    pos._x = Math.floor(xfl);
+    pos._leftX = Math.floor(xfl);
+    pos._rightX = Math.ceil(xfl);
+
+    pos._height = Math.floor(Math.min(Math.max(MathUtil.relative(rm._sideRect._right, rm._sideRect._left, mouseX) * CHART_FIELD_SIDEVIEW_LANES, 0), CHART_FIELD_SIDEVIEW_LANES));
+
+    // 変拍子に配慮してスナップさせる
+    let newTick: Ug.Tick = 0, lastTick: Ug.Tick = 0;
+    let lastMeas = 0, beat = 1.0;
+    for (const e of this._chart._events._childNodes) {
+      if (!(e instanceof Ug.EventBeatChange))
+        continue;
+      
+      newTick = lastTick + (e._bar - lastMeas) * Math.floor(Ug.DEFAULT_RESOLUTION * beat);
+      if (newTick >= pos._tick)
+        break;
+      lastTick = newTick;
+      lastMeas = e._bar;
+      beat = e._beatsPerBar / e._beatUnit;
+    }
+    let measLength = Math.floor(Ug.DEFAULT_RESOLUTION * beat);
+    let tickOffset = Math.floor((pos._tick - lastTick) / measLength) * measLength + lastTick;
+    pos._snappedTick = Math.round((pos._tick - tickOffset) / this._state._snapTick) * this._state._snapTick + tickOffset;
+    return pos;
+  }
 
   _getZoomCoef() : number {
     if (this._state._zoomLevel == 1) return 2;
@@ -148,6 +237,38 @@ export class ChartRenderer {
 
   static _calcFieldYFromTick(rm: RenderMeasures, tick: Ug.Tick) : number {
     return MathUtil.mixi(rm._rect._bottom, rm._rect._top, (tick - rm._visibleRangeBegin) / rm._visibleRange);
+  }
+
+  _hitTest(mouseX: number, mouseY: number) : HitTestResult {
+    let result = new HitTestResult;
+    let curPos = this._getCursorPosition(mouseX, mouseY);
+    let rm = this._calcMeasures();
+
+    result._mousePos._x = mouseX;
+    result._mousePos._y = mouseY;
+
+    this._hitTestScrollBar(rm, result);
+    return result;
+  }
+
+  protected _hitTestScrollBar(rm: RenderMeasures, result: HitTestResult) : boolean {
+    let sbm = this._calcScrollBarMetrices(rm);
+    let left = this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH;
+    let right = this._state._screenWidth;
+    let top = sbm._thumbPos;
+    let bottom = sbm._thumbPos + sbm._thumbLength;
+
+    let hit = MathUtil._ptInRect(result._mousePos._x, result._mousePos._y, left, top, right, bottom);
+    
+    if (!hit)
+      return false;
+    result._targetType = HitTestTargetType.SCROLLBAR_THUMB;
+    result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+    result._relativeY = MathUtil.relative(top, bottom, result._mousePos._y);
+    result._offsetMouseX = result._mousePos._x - left;
+    result._offsetMouseY = result._mousePos._y - top;
+    result._target = sbm;
+    return true;
   }
 
   _draw(ctx: CanvasRenderingContext2D) {
@@ -193,12 +314,9 @@ export class ChartRenderer {
     ctx.lineTo(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, this._state._screenHeight);
     ctx.stroke();
 
-    // thumb
-    let thumbLength = Math.max((rm._visibleRange / this._state._lastTick) * this._state._screenHeight, 32);
-    let thumbArea = this._state._screenHeight - thumbLength;
-
+    let sbm = this._calcScrollBarMetrices(rm);
     ctx.fillStyle = colorItemActiveBg;
-    ctx.fillRect(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, (1.0 - this._state._scrollY / this._state._lastTick) * thumbArea, CHART_FIELD_SCROLLBAR_WIDTH, thumbLength);
+    ctx.fillRect(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, sbm._thumbPos, CHART_FIELD_SCROLLBAR_WIDTH, sbm._thumbLength);
   }
 
   private _drawLaneLines(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {

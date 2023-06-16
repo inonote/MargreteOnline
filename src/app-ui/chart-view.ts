@@ -1,9 +1,10 @@
 import { createDivElement } from "../ui/element-util";
 import { Frame } from "../ui/frame";
 import * as Ug from "../chart/chart";
-import { ChartRenderer } from "./chart-renderer";
+import { ChartRenderer, HitTestTargetType } from "./chart-renderer";
 import { ChartMgxcParser } from "../chart/parser/mgxc";
 import { TEST_CHART } from "./test-chart";
+import * as MouseActions from "./chart-view-mouse-actions";
 
 export const SCROLLV_LINE = 240;
 
@@ -127,6 +128,11 @@ export class ChartView {
 
   protected _windowScale: number = 1.0;
 
+  protected _mouseAction?: MouseActions.ChartViewMouseAction;
+
+  get _currentChart() { return this._chart; }
+  get _currentViewState() { return this._viewState; }
+
   constructor(frame: Frame) {
     this._frame = frame;
 
@@ -138,6 +144,9 @@ export class ChartView {
     this._adjustLayout();
 
     this._elmCanvas.addEventListener("wheel", e => this._onMouseWheel(e));
+    this._elmCanvas.addEventListener("pointerdown", e => this._onPointerDown(e));
+    this._elmCanvas.addEventListener("pointerup", e => this._onPointerUp(e));
+    this._elmCanvas.addEventListener("pointermove", e => this._onPointerMove(e));
 
     let chart = ChartMgxcParser._parse(TEST_CHART);
     console.log(chart);
@@ -145,6 +154,10 @@ export class ChartView {
     this._renderer = new ChartRenderer(this._viewState, this._chart);
 
     this._viewState._lastTick = this._chart._getLastTick();
+  }
+
+  _invalidateView() {
+    this._dirty = true;
   }
 
   _adjustLayout() {
@@ -166,6 +179,36 @@ export class ChartView {
     if (this._viewState._scrollY < 0)
       this._viewState._scrollY = 0;
     this._dirty = true;
+  }
+
+  _onPointerDown(e: PointerEvent) {
+    this._elmCanvas.setPointerCapture(e.pointerId);
+    
+    let hitTestResult = this._renderer._hitTest(e.offsetX, e.offsetY);
+    if (hitTestResult._targetType === HitTestTargetType.SCROLLBAR_THUMB)
+      this._mouseAction = new MouseActions.ChartViewMouseActionScrollThumb(this, hitTestResult);
+      
+    if (!this._mouseAction)
+      return;
+    
+    this._mouseAction._start();
+  }
+
+  _onPointerUp(e: PointerEvent) {
+    this._elmCanvas.releasePointerCapture(e.pointerId);
+
+    if (!this._mouseAction)
+      return;
+
+    this._mouseAction._end(e.offsetX, e.offsetY);
+    this._mouseAction = undefined;
+  }
+
+  _onPointerMove(e: PointerEvent) {
+    if (!this._mouseAction)
+      return;
+    
+    this._mouseAction._move(e.offsetX, e.offsetY);
   }
 
   _draw() {
