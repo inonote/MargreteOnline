@@ -1,6 +1,7 @@
 :root {
   --ui-window-bg: #ffffff;
-  --ui-window-text: #ffffff;
+  --ui-window-bg-blur: rgba(255, 255, 255, 0.5);
+  --ui-window-text: #000000;
   --ui-window-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.25);
   --ui-window-radius: 4px;
   --ui-item-bg: transparent;
@@ -12,11 +13,26 @@
   --ui-text: #000000;
 }
 
+html.ui-dark-theme {
+  --ui-window-bg: #1f222a;
+  --ui-window-bg-blur: rgba(31, 33, 41, 0.5);
+  --ui-window-text: #b6b8c7;
+  --ui-window-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.25);
+  --ui-window-radius: 4px;
+  --ui-item-bg: transparent;
+  --ui-item-text: #b6b8c7;
+  --ui-item-active-bg: rgba(255, 255, 255, .125);
+  --ui-item-active-text: #b6b8c7;
+  --ui-item-separator: rgba(255, 255, 255, .125);
+  --ui-item-pressed-bg: rgba(255, 255, 255, .125);
+  --ui-text: #b6b8c7;
+}
+
 html, body {
   font-family: system-ui;
   font-size: 13px;
   margin: 0;
-  background: #ccc;
+  background: #000;
   overflow: hidden;
   width: 100%;
   height: 100%;
@@ -57,6 +73,9 @@ html, body {
   max-height: calc(100svh - 30px);
   overflow-y: auto;
   z-index: 1000;
+  /* background: var(--ui-window-bg-blur);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); */
 }
 
 .ui-popupmenu {
@@ -165,42 +184,57 @@ html, body {
   position: absolute;
   /* https://www.svgrepo.com/svg/506652/chevron-right
      https://www.svgrepo.com/page/licensing#MIT */
-  background-image: url('data:image/svg+xml;charset=utf8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22utf-8%22%3F%3E%3Csvg%20fill%3D%22%23000000%22%20width%3D%22800px%22%20height%3D%22800px%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M18.629%2015.997l-7.083-7.081L13.462%207l8.997%208.997L13.457%2025l-1.916-1.916z%22%2F%3E%3C%2Fsvg%3E');
+  -webkit-mask-image: url('data:image/svg+xml;charset=utf8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22utf-8%22%3F%3E%3Csvg%20fill%3D%22%23000000%22%20width%3D%22800px%22%20height%3D%22800px%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M18.629%2015.997l-7.083-7.081L13.462%207l8.997%208.997L13.457%2025l-1.916-1.916z%22%2F%3E%3C%2Fsvg%3E');-webkit-mask-background-position: center;
+  mask-image: url('data:image/svg+xml;charset=utf8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22utf-8%22%3F%3E%3Csvg%20fill%3D%22%23000000%22%20width%3D%22800px%22%20height%3D%22800px%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M18.629%2015.997l-7.083-7.081L13.462%207l8.997%208.997L13.457%2025l-1.916-1.916z%22%2F%3E%3C%2Fsvg%3E');-webkit-mask-background-position: center;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  background: var(--ui-item-text);
   content: "";
   width: 18px;
   right: 6px;
   top: 0;
   bottom: 0;
-  background-position: center;
-  background-size: contain;
-  background-repeat: no-repeat;
 }
 
 .ui-toolbar > .ui-menu-item.ui-has-popup > .ui-menu-item-label::after {
   /* https://www.svgrepo.com/svg/506647/chevron-bottom
      https://www.svgrepo.com/page/licensing#MIT */
-  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20fill%3D%22%23000000%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20id%3D%22SVGRepo_bgCarrier%22%20stroke-width%3D%220%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_tracerCarrier%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_iconCarrier%22%3E%3Cpath%20d%3D%22M16.003%2018.626l7.081-7.081L25%2013.46l-8.997%208.998-9.003-9%201.917-1.916z%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3C%2Fsvg%3E');
+  -webkit-mask-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20fill%3D%22%23000000%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20id%3D%22SVGRepo_bgCarrier%22%20stroke-width%3D%220%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_tracerCarrier%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_iconCarrier%22%3E%3Cpath%20d%3D%22M16.003%2018.626l7.081-7.081L25%2013.46l-8.997%208.998-9.003-9%201.917-1.916z%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3C%2Fsvg%3E');-webkit-mask-background-position: center;
+  mask-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20fill%3D%22%23000000%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20id%3D%22SVGRepo_bgCarrier%22%20stroke-width%3D%220%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_tracerCarrier%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_iconCarrier%22%3E%3Cpath%20d%3D%22M16.003%2018.626l7.081-7.081L25%2013.46l-8.997%208.998-9.003-9%201.917-1.916z%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3C%2Fsvg%3E');-webkit-mask-background-position: center;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  background: var(--ui-item-text);
   content: "";
   width: 18px;
   margin-left: 4px;
-  background-position: center;
-  background-size: contain;
-  background-repeat: no-repeat;
 }
 
 .ui-menu-popup > .ui-menu-item.ui-checked > .ui-menu-item-label::before {
   position: absolute;
   /* https://www.svgrepo.com/svg/506646/check
      https://www.svgrepo.com/page/licensing#MIT */
-  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20fill%3D%22%23000000%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20id%3D%22SVGRepo_bgCarrier%22%20stroke-width%3D%220%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_tracerCarrier%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_iconCarrier%22%3E%3Cpath%20d%3D%22M5%2016.577l2.194-2.195%205.486%205.484L24.804%207.743%2027%209.937l-14.32%2014.32z%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3C%2Fsvg%3E');
+  -webkit-mask-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20fill%3D%22%23000000%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20id%3D%22SVGRepo_bgCarrier%22%20stroke-width%3D%220%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_tracerCarrier%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_iconCarrier%22%3E%3Cpath%20d%3D%22M5%2016.577l2.194-2.195%205.486%205.484L24.804%207.743%2027%209.937l-14.32%2014.32z%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3C%2Fsvg%3E');
+  mask-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20fill%3D%22%23000000%22%20viewBox%3D%220%200%2032%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20id%3D%22SVGRepo_bgCarrier%22%20stroke-width%3D%220%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_tracerCarrier%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3C%2Fg%3E%3Cg%20id%3D%22SVGRepo_iconCarrier%22%3E%3Cpath%20d%3D%22M5%2016.577l2.194-2.195%205.486%205.484L24.804%207.743%2027%209.937l-14.32%2014.32z%22%3E%3C%2Fpath%3E%3C%2Fg%3E%3C%2Fsvg%3E');
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  background: var(--ui-item-text);
   content: "";
   width: 18px;
   left: 12px;
   top: 0;
   bottom: 0;
-  background-position: center;
-  background-size: contain;
-  background-repeat: no-repeat;
 }
 
 

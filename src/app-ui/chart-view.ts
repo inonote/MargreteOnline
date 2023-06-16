@@ -143,6 +143,8 @@ export class ChartView {
     console.log(chart);
     this._chart = chart || new Ug.Chart();
     this._renderer = new ChartRenderer(this._viewState, this._chart);
+
+    this._viewState._lastTick = this._chart._getLastTick();
   }
 
   _adjustLayout() {

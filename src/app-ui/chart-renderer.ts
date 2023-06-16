@@ -18,6 +18,8 @@ export const CHART_FIELD_AIR_ACTION_NOTE_HEIGHT    = 4;
 export const CHART_FIELD_SLIDE_CENTER_X            = 2;
 export const CHART_FIELD_SLIDE_HITTEST_CENTER_X    = 10;
 
+export const CHART_FIELD_SCROLLBAR_WIDTH          = 16;
+
 export const CHART_FIELD_SIDEVIEW_MARGIN_X        = 24;
 export const CHART_FIELD_SIDEVIEW_WIDTH            = 240;
 export const CHART_FIELD_SIDEVIEW_NOTE_HEIGHT      = 8;
@@ -105,15 +107,16 @@ export class ChartRenderer {
 
   _calcMeasures() : RenderMeasures {
     let rm = new RenderMeasures();
+    let viewWidth = this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH;
     let sideViewWidth = CHART_FIELD_SIDEVIEW_WIDTH + CHART_FIELD_SIDEVIEW_MARGIN_X;
-    if (this._state._screenWidth < (CHART_FIELD_MAX_WIDTH + sideViewWidth)) {
-      let fieldWidth = Math.max(Math.min(this._state._screenWidth, CHART_FIELD_MAX_WIDTH) - CHART_FIELD_MARGIN_X * 2, 100);
-      rm._rect._left = this._state._screenWidth / 2 - fieldWidth / 2;
+    if (viewWidth < (CHART_FIELD_MAX_WIDTH + sideViewWidth)) {
+      let fieldWidth = Math.max(Math.min(viewWidth, CHART_FIELD_MAX_WIDTH) - CHART_FIELD_MARGIN_X * 2, 100);
+      rm._rect._left = viewWidth / 2 - fieldWidth / 2;
       rm._rect._right = rm._rect._left + fieldWidth;
     }
     else {
       let fieldWidth = CHART_FIELD_MAX_WIDTH - CHART_FIELD_MARGIN_X * 2;
-      rm._rect._left = this._state._screenWidth / 2 - (CHART_FIELD_MAX_WIDTH + sideViewWidth) / 2 + sideViewWidth + CHART_FIELD_MARGIN_X;
+      rm._rect._left = viewWidth / 2 - (CHART_FIELD_MAX_WIDTH + sideViewWidth) / 2 + sideViewWidth + CHART_FIELD_MARGIN_X;
       rm._rect._right = rm._rect._left + fieldWidth;
     }
     rm._rect._top = 0;
@@ -169,6 +172,33 @@ export class ChartRenderer {
     this._drawAirCrushNotes(ctx, rm);
 
     this._drawNoteAttributes(ctx, rm);
+
+    this._drawScrollBar(ctx, rm);
+  }
+
+  private _drawScrollBar(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
+    const computedRootStyle = getComputedStyle(document.body);
+    const colorUiWindowBg = computedRootStyle.getPropertyValue("--ui-window-bg");
+    const colorItemSeparator = computedRootStyle.getPropertyValue("--ui-item-separator");
+    const colorItemActiveBg = computedRootStyle.getPropertyValue("--ui-item-active-bg");
+
+    // bg
+    ctx.fillStyle = colorUiWindowBg;
+    ctx.fillRect(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, 0, CHART_FIELD_SCROLLBAR_WIDTH, this._state._screenHeight);
+    
+    ctx.strokeStyle = colorItemSeparator;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, 0);
+    ctx.lineTo(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, this._state._screenHeight);
+    ctx.stroke();
+
+    // thumb
+    let thumbLength = Math.max((rm._visibleRange / this._state._lastTick) * this._state._screenHeight, 32);
+    let thumbArea = this._state._screenHeight - thumbLength;
+
+    ctx.fillStyle = colorItemActiveBg;
+    ctx.fillRect(this._state._screenWidth - CHART_FIELD_SCROLLBAR_WIDTH, (1.0 - this._state._scrollY / this._state._lastTick) * thumbArea, CHART_FIELD_SCROLLBAR_WIDTH, thumbLength);
   }
 
   private _drawLaneLines(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {

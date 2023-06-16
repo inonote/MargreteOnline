@@ -34,6 +34,13 @@ export class Note extends ChartObject {
     this._pairNoteRef = new WeakRef(targetNote);
   }
 
+  _getLastTick() : number {
+    let lastTick = this._tick;
+    for(const note of this._childNodes as Note[])
+      lastTick = Math.max(lastTick, note._getLastTick());
+    return lastTick;
+  }
+
   constructor() {
     super();
   }

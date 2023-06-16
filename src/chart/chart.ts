@@ -90,4 +90,11 @@ export class Chart {
   _meta: ChartMeta = new ChartMeta();
   _notes: Ug.Note = new Ug.Note();
   _events: Ug.Event = new Ug.Event();
+
+  _getLastTick() : number {
+    let lastTick = 0;
+    for(const note of this._notes._childNodes as Ug.Note[])
+      lastTick = Math.max(lastTick, note._getLastTick());
+    return lastTick;
+  }
 }
