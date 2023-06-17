@@ -15,7 +15,11 @@ export class SlideBgVertex {
 
 
 export class Tap extends Note {
-  _isGroundedShort() : boolean { return true; }
+  _create() { return new Tap(); }
+
+  _isTap() { return true; }
+  _isTapLike() { return true; }
+  _isResizable() { return true; }
 }
 
 
@@ -35,7 +39,16 @@ export enum ExTapDirection {
 export class ExTap extends Note {
   _direction: ExTapDirection = ExTapDirection.UP;
 
-  _isGroundedShort() : boolean { return true; }
+  _create() { return new ExTap(); }
+
+  _isTap() { return true; }
+  _isTapLike() { return true; }
+  _isResizable() { return true; }
+
+  _copyPropertiesTo(to: ExTap) {
+    super._copyPropertiesTo(to);
+    to._direction = this._direction;
+  }
 }
 
 
@@ -48,22 +61,39 @@ export enum FlickDirection {
 
 export class Flick extends Note {
   _direction: FlickDirection = FlickDirection.AUTO;
+
+  _create() { return new Flick(); }
   
-  _isGroundedShort() : boolean { return true; }
+  _isTap() { return true; }
+  _isTapLike() { return true; }
+  _isResizable() { return true; }
+
+  _copyPropertiesTo(to: Flick) {
+    super._copyPropertiesTo(to);
+    to._direction = this._direction;
+  }
 }
 
 
 
 export class Damage extends Note {
-  _isGroundedShort() : boolean { return true; }
-}
+  _create() { return new Damage(); }
 
+  _isTap() { return true; }
+  _isTapLike() { return true; }
+  _isResizable() { return true; }
+}
 
 
 export class Slide extends Note {
   _slideBgVertices: SlideBgVertex[] = [];
 
-  _isGroundedLong() : boolean { return true; }
+  _create() { return new Slide(); }
+
+  _isTapLike() { return true; }
+  _isSlideGroup() { return true; }
+  _isGroundedLongParent() { return true; }
+  _isResizable() { return true; }
 
   _prepareSlideBg() {
     this._slideBgVertices = [];
@@ -127,20 +157,36 @@ export enum SlideChildType {
 export class SlideChild extends Note {
   _type: SlideChildType = SlideChildType.STEP;
 
-  _isGroundedLong() : boolean { return true; }
-  _isLong(): boolean { return true; }
+  _create() { return new SlideChild(); }
+
+  _isSlideGroup() { return true; }
+  _isGroundedLongChild() { return true; }
+  _isResizable() { return true; }
+
+  _prepareSlideBg() { (this._parentNode as Slide|undefined)?._prepareSlideBg(); }
 }
 
 
 
 export class Hold extends Note {
-  _isGroundedLong() : boolean { return true; }
-  _isLong(): boolean { return true; }
+  _create() { return new Hold(); }
+
+  _isTapLike() { return true; }
+  _isHoldGroup() { return true; }
+  _isGroundedLongParent() { return true; }
+  _isResizable() { return true; }
 }
 
 
 
 export class HoldChild extends Note {
-  _isGroundedLong() : boolean { return true; }
-  _isLong(): boolean { return true; }
+  _create() { return new HoldChild(); }
+  get _x() : number { return (this._parentNode as Hold|undefined)?._x || 0; }
+  set _x(val: number) {}
+
+  get _width() { return (this._parentNode as Hold|undefined)?._width || 1; };
+  set _width(val: number) { };
+
+  _isHoldGroup() { return true; }
+  _isGroundedLongChild() { return true; }
 }

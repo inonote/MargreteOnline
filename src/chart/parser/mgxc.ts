@@ -478,16 +478,14 @@ export class ChartMgxcParser {
         note = exNote;
       }
       else if (args[1] === "ST" || args[1] === "EN") {
-        let exNote = new Ug.AirAction;
+        let exNote = new Ug.AirHoldAction;
         exNote._type = Ug.AirActionType.STEP;
-        exNote._height = parseInt(args[7], 10);
         note = exNote;
         isChildNote = true;
       }
       else if (args[1] === "LC" || args[1] === "EX") {
-        let exNote = new Ug.AirAction;
+        let exNote = new Ug.AirHoldAction;
         exNote._type = Ug.AirActionType.CONTROL;
-        exNote._height = parseInt(args[7], 10);
         note = exNote;
         isChildNote = true;
       }
@@ -509,14 +507,14 @@ export class ChartMgxcParser {
         note = exNote;
       }
       else if (args[1] === "ST" || args[1] === "EN") {
-        let exNote = new Ug.AirAction;
+        let exNote = new Ug.AirSlideAction;
         exNote._type = Ug.AirActionType.STEP;
         exNote._height = parseInt(args[7], 10);
         note = exNote;
         isChildNote = true;
       }
       else if (args[1] === "LC" || args[1] === "EX") {
-        let exNote = new Ug.AirAction;
+        let exNote = new Ug.AirSlideAction;
         exNote._type = Ug.AirActionType.CONTROL;
         exNote._height = parseInt(args[7], 10);
         note = exNote;

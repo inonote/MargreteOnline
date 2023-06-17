@@ -7,7 +7,10 @@ class MainFrame extends Frame {
   _menuBar?: MenuBar;
   _contextMenu?: ContextMenu;
   _toolBar?: ToolBar;
+  _toolBarNotes?: ToolBar;
   _chartView?: ChartView;
+
+  _toolbarVisibility: boolean = true;
 
   _onInit() : void {
     console.log("init");
@@ -100,8 +103,10 @@ class MainFrame extends Frame {
         new MenuItemSeparator(),
         new MenuItem("about", "Margrete Online について..."),
       ],
+      new MenuItemSpacer(),
+      new MenuItem("visible-toolbar", "[ - ]"),
     ]);
-    this._menuBar._eventOnItemClick = this._onCommand;
+    this._menuBar._eventOnItemClick = (p) => this._onCommand(p);
 
     this._menuBar._setCheckAll("lang-ja-jp", true);
     this._menuBar._setCheckAll("pen", true);
@@ -147,10 +152,68 @@ class MainFrame extends Frame {
         for(let i = 0; i < 16; ++i)
           x.push(new MenuItem("til-" + i, "TIL " + i));
         return x;
-      })()
+      })(),
+      /* [
+        new ToolBarButton("note", "", "TAP"),
+        new MenuItem("quantize-100", "TAP"),
+        new MenuItem("quantize-100", "ExTAP"),
+        new MenuItem("quantize-100", "FLICK"),
+        new MenuItemSeparator(),
+        new MenuItem("quantize-100", "HOLD"),
+        new MenuItem("quantize-100", "SLIDE"),
+        new MenuItem("quantize-100", "SLIDE 制御点"),
+        new MenuItemSeparator(),
+        new MenuItem("quantize-100", "AIR-UP"),
+        new MenuItem("quantize-100", "AIR-UP LEFT"),
+        new MenuItem("quantize-100", "AIR-UP RIGHT"),
+        new MenuItem("quantize-100", "AIR-DOWN"),
+        new MenuItem("quantize-100", "AIR-DOWN LEFT"),
+        new MenuItem("quantize-100", "AIR-DOWN RIGHT"),
+        new MenuItemSeparator(),
+        new MenuItem("quantize-custom", "AIR-HOLD"),
+        new MenuItem("quantize-custom", "AIR-SLIDE"),
+        new MenuItem("quantize-custom", "AIR-SLIDE 制御点"),
+        new MenuItemSeparator(),
+        new MenuItem("quantize-custom", "AIR-CRUSH"),
+        new MenuItem("quantize-custom", "AIR-CRUSH 制御点"),
+        new MenuItemSeparator(),
+        new MenuItem("quantize-custom", "DAMAGE"),
+        new MenuItem("quantize-custom", "CLICK"),
+      ],*/
     ]);
     
-    this._toolBar._eventOnItemClick = this._onCommand;
+    this._toolBar._eventOnItemClick = (p) => this._onCommand(p);
+    
+    this._toolBarNotes = new ToolBar(this);
+    this._toolBarNotes._appendNestedMenuItems([
+      new ToolBarButton("note-", "x-tap", "TAP"),
+      new ToolBarButton("note-", "x-extap", "ExTAP"),
+      new ToolBarButton("note-", "x-flick", "FLICK"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("note-", "x-slide", "SLIDE 始点 / SLIDE 制御点"),
+      new ToolBarButton("note-", "x-slide-step", "SLIDE 中継点"),
+      new ToolBarButton("note-", "x-hold", "HOLD"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("note-", "x-air-up", "AIR-UP"),
+      new ToolBarButton("note-", "x-air-upleft", "AIR-UP LEFT"),
+      new ToolBarButton("note-", "x-air-upright", "AIR-UP RIGHT"),
+      new ToolBarButton("note-", "x-air-down", "AIR-DOWN"),
+      new ToolBarButton("note-", "x-air-downleft", "AIR-DOWN LEFT"),
+      new ToolBarButton("note-", "x-air-downright", "AIR-DOWN RIGHT"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("note-", "x-airhold", "AIR-HOLD 始点 / AIR-ACTION"),
+      new ToolBarButton("note-", "x-airslide", "AIR-SLIDE 始点 / AIR-ACTION"),
+      new ToolBarButton("note-", "x-airslide-ctrl", "AIR-SLIDE 制御点"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("note-", "x-aircrush", "AIR-CRUSH 始点 / AIR-CRUSH 中継点"),
+      new ToolBarButton("note-", "x-aircrush-ctrl", "AIR-CRUSH 制御点"),
+      new ToolBarButtonSeparator(),
+      new ToolBarButton("note-", "x-damage", "DAMAGE"),
+      new ToolBarButton("note-", "x-click", "CLICK")
+    ]);
+    
+    this._toolBarNotes._eventOnItemClick = (p) => this._onCommand(p);
+    
     this._toolBar._setCheckAll("pen", true);
 
     this._contextMenu = new ContextMenu(this);
@@ -202,6 +265,21 @@ class MainFrame extends Frame {
   }
 
   _onCommand(item: MenuItem) {
+    switch (item._getId()) {
+      case "undo":
+        this._chartView?._undo();
+        break;
+      case "redo":
+        this._chartView?._redo();
+        break;
+      case "visible-toolbar":
+        this._toolbarVisibility = this._toolbarVisibility === false;
+        this._toolBar?._display(this._toolbarVisibility);
+        this._toolBarNotes?._display(this._toolbarVisibility);
+        this._chartView?._adjustLayout();
+        item._setLabel(this._toolbarVisibility ? "[ - ]" : "[ + ]");
+        break;
+    }
   }
 
   _onFrame() {

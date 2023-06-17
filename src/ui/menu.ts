@@ -121,6 +121,7 @@ export class MenuItem {
         if (!this._items[index]._disabled)
           break;
       }
+      this._items[index]._elmItem.scrollIntoView({block: "nearest", inline: "nearest" });
       this._hoverItem(this._items[index], true);
     }
     else if (e.key === "ArrowDown") {
@@ -134,6 +135,7 @@ export class MenuItem {
           break;
       }
 
+      this._items[index]._elmItem.scrollIntoView({ block: "nearest", inline: "nearest" });
       this._hoverItem(this._items[index], true);
     }
     else if (e.key === "ArrowRight") {
@@ -242,6 +244,12 @@ export class MenuItem {
         if (ret._x + popupRect._width > windowW) {
           ret._x = itemRect._left - popupRect._width + itemRect._width + 2;
         }
+        
+        if (ret._x < 0)
+          ret._x = 0;
+        else if (ret._x + popupRect._width > windowW)
+          ret._x = windowW - popupRect._width;
+        return ret;
       }
       else {
         ret._x = itemRect._right - 2;
@@ -268,6 +276,7 @@ export class MenuItem {
     
     this._getPopupHtmlElement().style.left = pos._x + "px";
     this._getPopupHtmlElement().style.top = pos._y + "px";
+    this._getPopupHtmlElement().style.maxHeight = (window.innerHeight - pos._y) + "px";
   }
 
   _activateMenu(item?: MenuItem) {
@@ -381,6 +390,11 @@ export class MenuItem {
   _getChildren() { return this._items; }
   _getId() { return this._id; }
   _getLabel() { return this._label; }
+  _setLabel(label: string) {
+    this._dirty = true;
+    this._label = label;
+    this._updateElement();
+  }
   _isDisabled() { return this._disabled; }
   _setCheck(checked: boolean) {
     this._dirty = checked !== this._isChecked;

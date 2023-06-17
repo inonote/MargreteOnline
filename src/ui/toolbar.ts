@@ -17,8 +17,12 @@ export class ToolBarButton extends MenuItem {
     if (!this._dirty)
       return;
     
-    if (this._icon !== "")
-      this._elmItemText.innerHTML = '<i class="bi bi-' + this._icon + '">';
+    if (this._icon !== undefined && this._icon !== "") {
+      if (this._icon.substring(0, 2) === "x-")
+        this._elmItemText.innerHTML = '<i class="ui-icon ui-icon-' + this._icon + '">';
+      else
+        this._elmItemText.innerHTML = '<i class="bi bi-' + this._icon + '">';
+    }
     else
       this._elmItemText.innerText = this._label;
     this._elmItemText.title = this._label;
@@ -137,6 +141,10 @@ export class ToolBar extends MenuItem {
     let item = this._items[index];
     this._activateMenu(item);
     item._hoverItem(item._getChildren()[0], true);
+  }
+
+  _display(visible: boolean) {
+    this._elm.classList.toggle("ui-hide", !visible);
   }
 
   _getPopupHtmlElement() : HTMLDivElement { return this._elm; }

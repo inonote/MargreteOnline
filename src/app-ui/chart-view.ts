@@ -5,7 +5,16 @@ import { ChartRenderer, HitTestTargetType } from "./chart-renderer";
 import { ChartMgxcParser } from "../chart/parser/mgxc";
 import { TEST_CHART } from "./test-chart";
 import * as MouseActions from "./chart-view-mouse-actions";
+import { UndoBuffer } from "../undo-buffer";
 
+const MOUSE_ACTION_LIST : (typeof MouseActions.ChartViewMouseAction)[] = [
+  MouseActions.ChartViewMouseActionScrollThumb,
+  MouseActions.ChartViewMouseActionInsertNote,
+  MouseActions.ChartViewMouseActionMoveNote,
+  MouseActions.ChartViewMouseActionResizeNote,
+];
+
+export type ChartViewCursorType = "default"|"move"|"ew-resize"|"ns-resize"|"not-allowed";
 export const SCROLLV_LINE = 240;
 
 export class SelectRange {
@@ -27,54 +36,6 @@ export class GhostNote {
 
 
 
-export enum DragMode {
-  DRAG_MODE_NONE = 0,
-
-  // 移動
-  DRAG_MODE_MOVE,
-
-  // 大きさ変更左
-  DRAG_MODE_RESIZE_L,
-
-  // 大きさ変更右
-  DRAG_MODE_RESIZE_R,
-
-  // 選択開始
-  DRAG_MODE_SELECT,
-
-  // 選択範囲移動
-  DRAG_MODE_MOVE_SELECTION,
-
-  // 選択範囲 大きさ変更終
-  DRAG_MODE_RESIZE_END_SELECTION,
-  DRAG_MODE_RESIZE_BEGIN_SELECTION,
-  DRAG_MODE_RESIZE_LEFT_SELECTION,
-  DRAG_MODE_RESIZE_RIGHT_SELECTION,
-
-  // 側面表示 - 移動
-  DRAG_MODE_SIDEVIEW_MOVE,
-  DRAG_MODE_SIDEVIEW_HEIGHT_MOVE_SELECTION,
-
-  // 正面表示 - 移動
-  DRAG_MODE_FRONTVIEW_MOVE,
-  DRAG_MODE_FRONTVIEW_MOVE_HEIGHT,
-  DRAG_MODE_FRONTVIEW_RESIZE_L,
-  DRAG_MODE_FRONTVIEW_RESIZE_R,
-} 
-
-export class DragState {
-  _isDragging: boolean = false;
-  _mode: DragMode = DragMode.DRAG_MODE_NONE;
-  _targetNote?: Ug.Note;
-  _targetOffsetMouseX: number = 0;
-  _targetOffsetMouseY: number = 0;
-  _startX: number = 0;
-  _startTick: Ug.Tick = 0;
-  _startHeight: number = 0;
-}
-
-
-
 export class ChartViewState {
   _screenWidth: number = 0;
   _screenHeight: number = 0;
@@ -83,7 +44,7 @@ export class ChartViewState {
   _playbackSeek: Ug.Tick = 0;
   _isPlaying: boolean = false;
 
-  _snapTick: Ug.Tick = 480;
+  _snapTick: Ug.Tick = 240;
 
   _scrollY: Ug.Tick = 0;
   _lastTick: Ug.Tick = 0;
@@ -102,8 +63,6 @@ export class ChartViewState {
   _isVisibledControlNotes: boolean = true;
 
   _activeTimelineId: number = 0;
-
-  _dragState: DragState = new DragState();
 
   _ghostNote: GhostNote = new GhostNote();
 
@@ -124,6 +83,7 @@ export class ChartView {
 
   protected _chart: Ug.Chart = new Ug.Chart();
   protected _viewState: ChartViewState = new ChartViewState();
+  protected _undoBuffer: UndoBuffer;
   protected _renderer: ChartRenderer;
 
   protected _windowScale: number = 1.0;
@@ -132,6 +92,7 @@ export class ChartView {
 
   get _currentChart() { return this._chart; }
   get _currentViewState() { return this._viewState; }
+  get _currentUndoBuffer() { return this._undoBuffer; }
 
   constructor(frame: Frame) {
     this._frame = frame;
@@ -147,11 +108,13 @@ export class ChartView {
     this._elmCanvas.addEventListener("pointerdown", e => this._onPointerDown(e));
     this._elmCanvas.addEventListener("pointerup", e => this._onPointerUp(e));
     this._elmCanvas.addEventListener("pointermove", e => this._onPointerMove(e));
+    window.addEventListener("keydown", e => this._onKeyDown(e) || (e.preventDefault(), e.stopPropagation()));
 
     let chart = ChartMgxcParser._parse(TEST_CHART);
     console.log(chart);
     this._chart = chart || new Ug.Chart();
     this._renderer = new ChartRenderer(this._viewState, this._chart);
+    this._undoBuffer = new UndoBuffer(this._chart);
 
     this._viewState._lastTick = this._chart._getLastTick();
   }
@@ -168,8 +131,8 @@ export class ChartView {
     let newCanvasWidth = this._elmSizeTracer.clientWidth * this._windowScale;
     let newCanvasHeight = this._elmSizeTracer.clientHeight * this._windowScale;
     if (this._elmCanvas.width !== newCanvasHeight || this._elmCanvas.height !== newCanvasHeight) {
-      this._elmCanvas.width = this._elmSizeTracer.clientWidth * this._windowScale;
-      this._elmCanvas.height = this._elmSizeTracer.clientHeight * this._windowScale;
+      this._elmCanvas.width = newCanvasWidth;
+      this._elmCanvas.height = newCanvasHeight;
       this._dirty = true;
     }
   }
@@ -182,33 +145,64 @@ export class ChartView {
   }
 
   _onPointerDown(e: PointerEvent) {
+    if (e.button !== 0)
+      return;
+      
     this._elmCanvas.setPointerCapture(e.pointerId);
     
     let hitTestResult = this._renderer._hitTest(e.offsetX, e.offsetY);
-    if (hitTestResult._targetType === HitTestTargetType.SCROLLBAR_THUMB)
-      this._mouseAction = new MouseActions.ChartViewMouseActionScrollThumb(this, hitTestResult);
-      
-    if (!this._mouseAction)
+    let mouseActionClass = MOUSE_ACTION_LIST.find(x => x._isOwnAction(hitTestResult));
+    if (!mouseActionClass)
       return;
     
+    this._undoBuffer._beginRecording();
+    this._mouseAction = new mouseActionClass(this, hitTestResult);
     this._mouseAction._start();
   }
 
   _onPointerUp(e: PointerEvent) {
+    if (e.button !== 0)
+      return;
+
     this._elmCanvas.releasePointerCapture(e.pointerId);
 
     if (!this._mouseAction)
       return;
 
-    this._mouseAction._end(e.offsetX, e.offsetY);
+    this._mouseAction._move(
+      e.offsetX, e.offsetY,
+      this._renderer._getCursorPosition(e.offsetX, e.offsetY));
+    this._mouseAction._end();
     this._mouseAction = undefined;
+    this._undoBuffer._commitRecording();
   }
 
   _onPointerMove(e: PointerEvent) {
-    if (!this._mouseAction)
+    if (!this._mouseAction) {
+      let hitTestResult = this._renderer._hitTest(e.offsetX, e.offsetY);
+      let mouseActionClass = MOUSE_ACTION_LIST.find(x => x._isOwnAction(hitTestResult));
+      if (!mouseActionClass)
+        this._setCursor("default");
+      else
+        this._setCursor(mouseActionClass._getCusror(hitTestResult));
       return;
+    }
     
-    this._mouseAction._move(e.offsetX, e.offsetY);
+    this._mouseAction._move(
+      e.offsetX, e.offsetY,
+      this._renderer._getCursorPosition(e.offsetX, e.offsetY));
+  }
+
+  _onKeyDown(e: KeyboardEvent) : boolean {
+    if (this._mouseAction) {
+      if (e.key === "Escape") { // ドラッグをキャンセル
+        this._mouseAction._cancel();
+        this._mouseAction = undefined;
+        this._undoBuffer._discardRecording();
+      }
+      return true;
+    }
+    return false;
   }
 
   _draw() {
@@ -228,4 +222,17 @@ export class ChartView {
     this._renderer._draw(ctx);
   }
   
+  _setCursor(cursorType: ChartViewCursorType) {
+    this._elmCanvas.style.cursor = cursorType;
+  }
+
+  _undo() {
+    if (this._undoBuffer._undo())
+      this._invalidateView();
+  }
+
+  _redo() {
+    if (this._undoBuffer._redo())
+      this._invalidateView();
+  }
 }

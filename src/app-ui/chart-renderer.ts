@@ -87,7 +87,8 @@ export const CHART_FIELD_COLOR_AIR_CRUSH_CUSTOM = [
 
 export enum HitTestTargetType {
   NONE,
-  SCROLLBAR_THUMB
+  SCROLLBAR_THUMB,
+  NOTE
 }
 
 export class RendererCursorPosition {
@@ -196,7 +197,7 @@ export class ChartRenderer {
     pos._tick = Math.max(MathUtil.mixi(rm._visibleRangeBegin, rm._visibleRangeEnd, MathUtil.relative(rm._rect._bottom, rm._rect._top, mouseY)), 0);
     pos._realX = MathUtil.relative(rm._rect._left, rm._rect._right, mouseX) * 16.0;
     let xfl = Math.min(Math.max(pos._realX, 0.0), 15.0);
-    pos._x = Math.floor(xfl);
+    pos._x = Math.round(xfl);
     pos._leftX = Math.floor(xfl);
     pos._rightX = Math.ceil(xfl);
 
@@ -246,8 +247,21 @@ export class ChartRenderer {
 
     result._mousePos._x = mouseX;
     result._mousePos._y = mouseY;
+    result._curPos = curPos;
 
-    this._hitTestScrollBar(rm, result);
+    this._hitTestScrollBar(rm, result) ||
+    this._hitTestAirHoldNotes(rm, result) ||
+    this._hitTestAirHoldBg(rm, result) ||
+    this._hitTestAirCrushNotes(rm, result) ||
+    this._hitTestAirSlideNotes(rm, result) ||
+    this._hitTestGroundedShortNotes(rm, result) ||
+    this._hitTestGroundedLongNotes(rm, result) ||
+    this._hitTestAir(rm, result) ||
+    this._hitTestAirCrushBg(rm, result) ||
+    this._hitTestAirSlideBg(rm, result) ||
+    this._hitTestGroundedLongBg(rm, result) ||
+    true;
+    
     return result;
   }
 
@@ -270,6 +284,172 @@ export class ChartRenderer {
     result._target = sbm;
     return true;
   }
+
+  protected static _hitTestNote(rm: RenderMeasures, result: HitTestResult, note: Ug.Note, customX?: number, customWidth?: number) : boolean {
+    let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+    let noteX = customX === undefined ? note._x : customX;
+    let left = MathUtil.mixi(rm._rect._left, rm._rect._right, noteX / 16.0);
+    let right = MathUtil.mixi(rm._rect._left, rm._rect._right, (customWidth === undefined ? (note._x + note._width) : (noteX + customWidth)) / 16.0);
+    let top = y - CHART_FIELD_NOTE_HITTEST_HEIGHT / 2;
+    let bottom = y + CHART_FIELD_NOTE_HITTEST_HEIGHT / 2;
+    
+    if (!MathUtil._ptInRect(
+      result._mousePos._x, result._mousePos._y,
+      left, top, right, bottom))
+      return false;
+
+    result._targetType = HitTestTargetType.NOTE;
+    result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+    result._relativeY = MathUtil.relative(top, bottom, result._mousePos._y);
+    result._offsetMouseX = result._mousePos._x - left;
+    result._offsetMouseY = result._mousePos._y - top;
+    result._target = note;
+    return true;
+  }
+
+  protected _hitTestAirHoldNotes(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !(note instanceof Ug.AirHold) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+        
+        for(const child of note._childNodes as Ug.Note[]) {
+          if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+            child._timelineId == this._state._activeTimelineId) {
+              if (ChartRenderer._hitTestNote(rm, result, child))
+                return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  protected _hitTestAirHoldBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    return false;
+  }
+
+  protected _hitTestAirCrushNotes(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !(note instanceof Ug.AirCrush) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+        
+        let queue: Ug.AirCrushAction[] = [];
+        let lastControlNote: Ug.AirCrush|Ug.AirCrushAction = note;
+        for(const child of note._childNodes as Ug.AirCrushAction[]) {
+          if (child._type === Ug.AirCrushActionType.STEP && note._lastChild !== child) {
+            queue.push(child);
+          }
+          else {
+            for(const queueNote of queue) {
+              let pt = MathUtil.relative(lastControlNote._tick, child._tick, queueNote._tick);
+              if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+                queueNote._timelineId === this._state._activeTimelineId) {
+                if (ChartRenderer._hitTestNote(
+                  rm, result, queueNote,
+                  MathUtil.mix(lastControlNote._x, child._x, pt),
+                  MathUtil.mix(lastControlNote._width, child._width, pt)))
+                  return true;
+              }
+            }
+
+            queue = [];
+            if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+              child._timelineId == this._state._activeTimelineId) {
+              if (ChartRenderer._hitTestNote(rm, result, child))
+                return true;
+            }
+            
+            lastControlNote = child;
+
+          }
+        }
+
+        if (note._tick >= rm._visibleRangeBegin && note._tick <= rm._visibleRangeEnd &&
+          note._timelineId == this._state._activeTimelineId) {
+          if (ChartRenderer._hitTestNote(rm, result, note))
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  protected _hitTestAirSlideNotes(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !(note instanceof Ug.AirSlide) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+        
+        for(const child of note._childNodes as Ug.Note[]) {
+          if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+            child._timelineId == this._state._activeTimelineId) {
+              if (ChartRenderer._hitTestNote(rm, result, child))
+                return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+
+  protected _hitTestGroundedShortNotes(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || note._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd || !note._isTap())
+          continue;
+        if (note._timelineId !== this._state._activeTimelineId)
+          continue;
+        
+        if (ChartRenderer._hitTestNote(rm, result, note))
+          return true;
+      }
+    }
+    return false;
+  }
+
+  protected _hitTestGroundedLongNotes(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !note._isGroundedLongParent() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+        
+        for(const child of note._childNodes as Ug.Note[]) {
+          if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
+            child._timelineId == this._state._activeTimelineId) {
+              if (ChartRenderer._hitTestNote(rm, result, child))
+                return true;
+          }
+        }
+
+        if (note._tick >= rm._visibleRangeBegin && note._tick <= rm._visibleRangeEnd &&
+          note._timelineId == this._state._activeTimelineId) {
+          if (ChartRenderer._hitTestNote(rm, result, note))
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  _hitTestAir(rm: RenderMeasures, result: HitTestResult) : boolean {
+    return false;
+  }
+
+  _hitTestAirCrushBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    return false;
+  }
+
+  _hitTestAirSlideBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    return false;
+  }
+
+  _hitTestGroundedLongBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    return false;
+  }
+
 
   _draw(ctx: CanvasRenderingContext2D) {
     const rm: RenderMeasures = this._calcMeasures();
@@ -608,7 +788,7 @@ export class ChartRenderer {
 
   private _drawGroundedLongBg(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
     for(const note of this._chart._notes._childNodes as Ug.Note[]) {
-      if (!note._isGroundedLong() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+      if (!note._isGroundedLongParent() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
         continue;
 
       if (note instanceof Ug.Hold) {
@@ -700,7 +880,7 @@ export class ChartRenderer {
       if (!(note instanceof Ug.AirHold) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
         continue;
       
-      let centerX = rm._rect._left + rm._rect._width * (note._x + note._width / 2.0) / 16.0 - 1.5;
+      let centerX = rm._rect._left + rm._rect._width * (note._x + note._width / 2.0) / 16.0;
       let beginY = ChartRenderer._calcFieldYFromTick(rm, note._tick);
       let endY = ChartRenderer._calcFieldYFromTick(rm, (note._lastChild as Ug.HoldChild)._tick);
       
@@ -746,7 +926,7 @@ export class ChartRenderer {
         beginCenterX + CHART_FIELD_SLIDE_CENTER_X,
         ChartRenderer._calcFieldYFromTick(rm, note._tick));
 
-      for(const childNote of note._childNodes as Ug.AirAction[]) {
+      for(const childNote of note._childNodes as Ug.AirSlideAction[]) {
         left = childNote._x / 16.0;
         right = (childNote._x + childNote._width) / 16.0;
         bgVertices.push(
@@ -789,7 +969,7 @@ export class ChartRenderer {
       ctx.moveTo(
         MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES),
         ChartRenderer._calcFieldYFromTick(rm, note._tick));
-      for(const childNote of note._childNodes as Ug.AirAction[]) {
+      for(const childNote of note._childNodes as Ug.AirSlideAction[]) {
         if (childNote._type === Ug.AirActionType.STEP && note._lastChild !== childNote)
           continue;
 
@@ -869,7 +1049,7 @@ export class ChartRenderer {
   private _drawGroundedShortNotes(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
     for (let w = 16; w > 0; --w) {
       for(const note of this._chart._notes._childNodes as Ug.Note[]) {
-        if (note._width !== w || note._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd || !note._isGroundedShort())
+        if (note._width !== w || note._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd || !note._isTap())
           continue;
         if (note._timelineId !== this._state._activeTimelineId)
           continue;
@@ -882,7 +1062,7 @@ export class ChartRenderer {
   private _drawGroundedLongNotes(ctx: CanvasRenderingContext2D, rm: RenderMeasures) {
     for (let w = 16; w > 0; --w) {
       for(const note of this._chart._notes._childNodes as Ug.Note[]) {
-        if (note._width !== w || !note._isGroundedLong() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        if (note._width !== w || !note._isGroundedLongParent() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
           continue;
         
         if (note._tick >= rm._visibleRangeBegin && note._tick <= rm._visibleRangeEnd &&
@@ -911,8 +1091,8 @@ export class ChartRenderer {
         for(const child of note._childNodes as Ug.Note[]) {
           if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
             child._timelineId == this._state._activeTimelineId) {
-              ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirAction);
-              ChartRenderer._sideViewDrawAirPoint(ctx, rm, child as Ug.AirAction);
+              ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirHoldAction);
+              ChartRenderer._sideViewDrawAirPoint(ctx, rm, child as Ug.AirHoldAction);
           }
         }
       }
@@ -932,8 +1112,8 @@ export class ChartRenderer {
         for(const child of note._childNodes as Ug.Note[]) {
           if (child._tick >= rm._visibleRangeBegin && child._tick <= rm._visibleRangeEnd &&
             child._timelineId == this._state._activeTimelineId) {
-            ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirAction);
-            ChartRenderer._sideViewDrawAirPoint(ctx, rm, child as Ug.AirAction);
+            ChartRenderer._drawAirAction(ctx, rm, child as Ug.AirSlideAction);
+            ChartRenderer._sideViewDrawAirPoint(ctx, rm, child as Ug.AirSlideAction);
           }
         }
       }
@@ -1145,7 +1325,7 @@ export class ChartRenderer {
     }
   }
 
-  private static _drawAirAction(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirAction) {
+  private static _drawAirAction(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirHoldAction|Ug.AirSlideAction) {
     let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
 
     ctx.beginPath();
@@ -1163,7 +1343,7 @@ export class ChartRenderer {
     ctx.stroke();
   }
 
-  private static _sideViewDrawAirPoint(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirHold|Ug.AirSlide|Ug.AirAction|Ug.AirCrush|Ug.AirCrushAction) {
+  private static _sideViewDrawAirPoint(ctx: CanvasRenderingContext2D, rm: RenderMeasures, note: Ug.AirHold|Ug.AirHoldAction|Ug.AirSlide|Ug.AirSlideAction|Ug.AirCrush|Ug.AirCrushAction) {
     let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
 
     ctx.beginPath();
@@ -1171,7 +1351,7 @@ export class ChartRenderer {
       MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES) - CHART_FIELD_SIDEVIEW_NOTE_WIDTH / 2.0, y - CHART_FIELD_SIDEVIEW_NOTE_HEIGHT / 2.0,
 		  CHART_FIELD_SIDEVIEW_NOTE_WIDTH, CHART_FIELD_SIDEVIEW_NOTE_HEIGHT);
     
-    if (note instanceof Ug.AirAction && note._type === Ug.AirActionType.STEP) {
+    if ((note instanceof Ug.AirHoldAction || note instanceof Ug.AirSlideAction) && note._type === Ug.AirActionType.STEP) {
       ctx.fillStyle = CHART_FIELD_COLOR_AIR_ACTION;
       ctx.fill();
     }
