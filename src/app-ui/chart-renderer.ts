@@ -88,7 +88,8 @@ export const CHART_FIELD_COLOR_AIR_CRUSH_CUSTOM = [
 export enum HitTestTargetType {
   NONE,
   SCROLLBAR_THUMB,
-  NOTE
+  NOTE,
+  LONG_BG
 }
 
 export class RendererCursorPosition {

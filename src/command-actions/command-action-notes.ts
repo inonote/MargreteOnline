@@ -50,33 +50,32 @@ export class CommandActionNoteProperty extends CommandAction {
 
 export class CommandActionNoteInsert extends CommandAction {
 	protected _note: Ug.Note;
+	protected _parentNote?: Ug.Note;
 	protected _pairNote?: Ug.Note;
 
-  constructor(note: Ug.Note) {
+  constructor(note: Ug.Note, parentNote?: Ug.Note) {
     super();
     this._note = note;
+    this._parentNote = parentNote;
     this._pairNote = note._getPair();
   }
 
   _undo(chart: Ug.Chart) : boolean {
-    chart._notes._removeChild(this._note);
-    chart._notes._makePair(undefined);
+    (this._parentNote || chart._notes)._removeChild(this._note);
+    this._note._makePair(undefined);
     return true;
   }
   
   _redo(chart: Ug.Chart) : boolean {
-    chart._notes._appendChild(this._note);
-    chart._notes._makePair(this._pairNote);
+    (this._parentNote || chart._notes)._appendChild(this._note);
+    this._note._makePair(this._pairNote);
     return true;
   }
 }
 
 export class CommandActionNoteDelete extends CommandActionNoteInsert {
-	protected _note: Ug.Note;
-
-  constructor(note: Ug.Note) {
-    super(note);
-    this._note = note;
+  constructor(note: Ug.Note, parentNote?: Ug.Note) {
+    super(note, parentNote);
   }
 
   _undo = super._redo;

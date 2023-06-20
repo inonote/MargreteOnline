@@ -73,6 +73,30 @@ export class ChartViewState {
 
 
 
+export enum NoteTypeId {
+  Tap = "Tap",
+  ExTap = "ExTap",
+  Flick = "Flick",
+  Slide = "Slide",
+  SlideStep = "SlideStep",
+  Hold = "Hold",
+  AirUp = "AirUp",
+  AirUpLeft = "AirUpLeft",
+  AirUpRight = "AirUpRight",
+  AirDown = "AirDown",
+  AirDownLeft = "AirDownLeft",
+  AirDownRight = "AirDownRight",
+  AirHold = "AirHold",
+  AirSlide = "AirSlide",
+  AirSlideControl = "AirSlideControl",
+  AirCrush = "AirCrush",
+  AirCrushControl = "AirCrushControl",
+  Damage = "Damage",
+  Click = "Click",
+}
+
+
+
 export class ChartView {
   protected _frame: Frame;
 
@@ -89,6 +113,8 @@ export class ChartView {
   protected _windowScale: number = 1.0;
 
   protected _mouseAction?: MouseActions.ChartViewMouseAction;
+
+  protected _activeNoteType: NoteTypeId = NoteTypeId.Tap;
 
   get _currentChart() { return this._chart; }
   get _currentViewState() { return this._viewState; }
@@ -138,7 +164,7 @@ export class ChartView {
   }
 
   _onMouseWheel(e: WheelEvent) {
-    this._viewState._scrollY += -e.deltaY / 40 * SCROLLV_LINE / this._renderer._getZoomCoef();
+    this._viewState._scrollY += Math.round(-e.deltaY / 40 * SCROLLV_LINE / this._renderer._getZoomCoef());
     if (this._viewState._scrollY < 0)
       this._viewState._scrollY = 0;
     this._dirty = true;
@@ -151,7 +177,7 @@ export class ChartView {
     this._elmCanvas.setPointerCapture(e.pointerId);
     
     let hitTestResult = this._renderer._hitTest(e.offsetX, e.offsetY);
-    let mouseActionClass = MOUSE_ACTION_LIST.find(x => x._isOwnAction(hitTestResult));
+    let mouseActionClass = MOUSE_ACTION_LIST.find(x => x._isOwnAction(this, hitTestResult));
     if (!mouseActionClass)
       return;
     
@@ -180,7 +206,7 @@ export class ChartView {
   _onPointerMove(e: PointerEvent) {
     if (!this._mouseAction) {
       let hitTestResult = this._renderer._hitTest(e.offsetX, e.offsetY);
-      let mouseActionClass = MOUSE_ACTION_LIST.find(x => x._isOwnAction(hitTestResult));
+      let mouseActionClass = MOUSE_ACTION_LIST.find(x => x._isOwnAction(this, hitTestResult));
       if (!mouseActionClass)
         this._setCursor("default");
       else
@@ -235,4 +261,7 @@ export class ChartView {
     if (this._undoBuffer._redo())
       this._invalidateView();
   }
+
+  _setActiveNoteType(type: NoteTypeId) { this._activeNoteType = type; }
+  _getActiveNoteType() : NoteTypeId { return this._activeNoteType; }
 }

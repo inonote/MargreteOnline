@@ -1,7 +1,8 @@
 import { Frame } from "./ui/frame";
 import { MenuBar, MenuItem, MenuItemSeparator, MenuItemSpacer, ContextMenu } from "./ui/menu";
 import { ToolBar, ToolBarButton, ToolBarButtonSeparator } from "./ui/toolbar";
-import { ChartView } from "./app-ui/chart-view";
+import { ChartView, NoteTypeId } from "./app-ui/chart-view";
+
 
 class MainFrame extends Frame {
   _menuBar?: MenuBar;
@@ -186,30 +187,30 @@ class MainFrame extends Frame {
     
     this._toolBarNotes = new ToolBar(this);
     this._toolBarNotes._appendNestedMenuItems([
-      new ToolBarButton("note-", "x-tap", "TAP"),
-      new ToolBarButton("note-", "x-extap", "ExTAP"),
-      new ToolBarButton("note-", "x-flick", "FLICK"),
+      new ToolBarButton("note-Tap", "x-tap", "TAP"),
+      new ToolBarButton("note-ExTap", "x-extap", "ExTAP"),
+      new ToolBarButton("note-Flick", "x-flick", "FLICK"),
       new ToolBarButtonSeparator(),
-      new ToolBarButton("note-", "x-slide", "SLIDE 始点 / SLIDE 制御点"),
-      new ToolBarButton("note-", "x-slide-step", "SLIDE 中継点"),
-      new ToolBarButton("note-", "x-hold", "HOLD"),
+      new ToolBarButton("note-Slide", "x-slide", "SLIDE 始点 / SLIDE 制御点"),
+      new ToolBarButton("note-SlideStep", "x-slide-step", "SLIDE 中継点"),
+      new ToolBarButton("note-Hold", "x-hold", "HOLD"),
       new ToolBarButtonSeparator(),
-      new ToolBarButton("note-", "x-air-up", "AIR-UP"),
-      new ToolBarButton("note-", "x-air-upleft", "AIR-UP LEFT"),
-      new ToolBarButton("note-", "x-air-upright", "AIR-UP RIGHT"),
-      new ToolBarButton("note-", "x-air-down", "AIR-DOWN"),
-      new ToolBarButton("note-", "x-air-downleft", "AIR-DOWN LEFT"),
-      new ToolBarButton("note-", "x-air-downright", "AIR-DOWN RIGHT"),
+      new ToolBarButton("note-AirUp", "x-air-up", "AIR-UP"),
+      new ToolBarButton("note-AirUpLeft", "x-air-upleft", "AIR-UP LEFT"),
+      new ToolBarButton("note-AirUpRight", "x-air-upright", "AIR-UP RIGHT"),
+      new ToolBarButton("note-AirDown", "x-air-down", "AIR-DOWN"),
+      new ToolBarButton("note-AirDownLeft", "x-air-downleft", "AIR-DOWN LEFT"),
+      new ToolBarButton("note-AirDownRight", "x-air-downright", "AIR-DOWN RIGHT"),
       new ToolBarButtonSeparator(),
-      new ToolBarButton("note-", "x-airhold", "AIR-HOLD 始点 / AIR-ACTION"),
-      new ToolBarButton("note-", "x-airslide", "AIR-SLIDE 始点 / AIR-ACTION"),
-      new ToolBarButton("note-", "x-airslide-ctrl", "AIR-SLIDE 制御点"),
+      new ToolBarButton("note-AirHold", "x-airhold", "AIR-HOLD 始点 / AIR-ACTION"),
+      new ToolBarButton("note-AirSlide", "x-airslide", "AIR-SLIDE 始点 / AIR-ACTION"),
+      new ToolBarButton("note-AirSlideControl", "x-airslide-ctrl", "AIR-SLIDE 制御点"),
       new ToolBarButtonSeparator(),
-      new ToolBarButton("note-", "x-aircrush", "AIR-CRUSH 始点 / AIR-CRUSH 中継点"),
-      new ToolBarButton("note-", "x-aircrush-ctrl", "AIR-CRUSH 制御点"),
+      new ToolBarButton("note-AirCrush", "x-aircrush", "AIR-CRUSH 始点 / AIR-CRUSH 中継点"),
+      new ToolBarButton("note-AirCrushControl", "x-aircrush-ctrl", "AIR-CRUSH 制御点"),
       new ToolBarButtonSeparator(),
-      new ToolBarButton("note-", "x-damage", "DAMAGE"),
-      new ToolBarButton("note-", "x-click", "CLICK")
+      new ToolBarButton("note-Damage", "x-damage", "DAMAGE"),
+      new ToolBarButton("note-Click", "x-click", "CLICK")
     ]);
     
     this._toolBarNotes._eventOnItemClick = (p) => this._onCommand(p);
@@ -279,11 +280,79 @@ class MainFrame extends Frame {
         this._chartView?._adjustLayout();
         item._setLabel(this._toolbarVisibility ? "[ - ]" : "[ + ]");
         break;
+        
+      case "note-Tap":
+        this._chartView?._setActiveNoteType(NoteTypeId.Tap);
+        break;
+      case "note-ExTap":
+        this._chartView?._setActiveNoteType(NoteTypeId.ExTap);
+        break;
+      case "note-Flick":
+        this._chartView?._setActiveNoteType(NoteTypeId.Flick);
+        break;
+      case "note-Slide":
+        this._chartView?._setActiveNoteType(NoteTypeId.Slide);
+        break;
+      case "note-SlideStep":
+        this._chartView?._setActiveNoteType(NoteTypeId.SlideStep);
+        break;
+      case "note-Hold":
+        this._chartView?._setActiveNoteType(NoteTypeId.Hold);
+        break;
+      case "note-AirUp":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirUp);
+        break;
+      case "note-AirUpLeft":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirUpLeft);
+        break;
+      case "note-AirUpRight":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirUpRight);
+        break;
+      case "note-AirDown":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirDown);
+        break;
+      case "note-AirDownLeft":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirDownLeft);
+        break;
+      case "note-AirDownRight":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirDownRight);
+        break;
+      case "note-AirHold":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirHold);
+        break;
+      case "note-AirSlide":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirSlide);
+        break;
+      case "note-AirSlideControl":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirSlideControl);
+        break;
+      case "note-AirCrush":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirCrush);
+        break;
+      case "note-AirCrushControl":
+        this._chartView?._setActiveNoteType(NoteTypeId.AirCrushControl);
+        break;
+      case "note-Damage":
+        this._chartView?._setActiveNoteType(NoteTypeId.Damage);
+        break;
+      case "note-Click":
+        this._chartView?._setActiveNoteType(NoteTypeId.Click);
+        break;
     }
+    this._updateToolbarButtons();
   }
 
   _onFrame() {
     this._chartView?._draw();
+  }
+
+  _updateToolbarButtons() {
+    if (!this._chartView)
+      return;
+    
+    for(const id in NoteTypeId) {
+      this._toolBarNotes?._setCheckAll("note-" + id, this._chartView._getActiveNoteType() === id);
+    }
   }
 }
 

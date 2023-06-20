@@ -20,6 +20,7 @@ export class Tap extends Note {
   _isTap() { return true; }
   _isTapLike() { return true; }
   _isResizable() { return true; }
+  _isAllowedWithAir() { return true; }
 }
 
 
@@ -44,6 +45,7 @@ export class ExTap extends Note {
   _isTap() { return true; }
   _isTapLike() { return true; }
   _isResizable() { return true; }
+  _isAllowedWithAir() { return true; }
 
   _copyPropertiesTo(to: ExTap) {
     super._copyPropertiesTo(to);
@@ -67,6 +69,7 @@ export class Flick extends Note {
   _isTap() { return true; }
   _isTapLike() { return true; }
   _isResizable() { return true; }
+  _isAllowedWithAir() { return true; }
 
   _copyPropertiesTo(to: Flick) {
     super._copyPropertiesTo(to);
@@ -82,6 +85,7 @@ export class Damage extends Note {
   _isTap() { return true; }
   _isTapLike() { return true; }
   _isResizable() { return true; }
+  _isAllowedWithAir() { return true; }
 }
 
 
@@ -162,6 +166,7 @@ export class SlideChild extends Note {
   _isSlideGroup() { return true; }
   _isGroundedLongChild() { return true; }
   _isResizable() { return true; }
+  _isAllowedWithAir() { return this._parentNode?._lastChild === this; }
 
   _prepareSlideBg() { (this._parentNode as Slide|undefined)?._prepareSlideBg(); }
 }
@@ -189,4 +194,11 @@ export class HoldChild extends Note {
 
   _isHoldGroup() { return true; }
   _isGroundedLongChild() { return true; }
+  _isAllowedWithAir() { return true; }
+}
+
+
+
+export class Click extends Note {
+  _create() { return new Click(); }
 }

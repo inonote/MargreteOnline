@@ -33,6 +33,7 @@ export class Note extends ChartObject {
   _isAirLongParent() { return false; }
   _isAirLongChild() { return false; }
   _isResizable() { return false; }
+  _isAllowedWithAir() { return false; }
   _isGroundedLongGroup() { return this._isSlideGroup() || this._isHoldGroup(); }
   _isAirLongGroup() { return this._isAirHoldGroup() || this._isAirSlideGroup() || this._isAirCrushGroup(); }
   _isLongParent() { return this._isGroundedLongParent() || this._isAirLongParent(); }
