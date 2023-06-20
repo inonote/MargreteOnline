@@ -132,7 +132,7 @@ export class ChartNode {
       return;
     
     this._children[0]._previousSibling = undefined;
-    for(let i = 1; i < this._children.length - 1; ++i) {
+    for(let i = 1; i < this._children.length; ++i) {
       this._children[i - 1]._nextSibling = new WeakRef(this._children[i]);
       this._children[i]._previousSibling = new WeakRef(this._children[i - 1]);
     }

@@ -365,17 +365,22 @@ export class ChartViewMouseActionInsertNote extends ChartViewMouseAction {
         break;
       case NoteTypeId.AirHold:
         note = new Ug.AirHold;
+        (note as Ug.AirHold)._height = 8;
         childNote = new Ug.AirHoldAction;
         break;
       case NoteTypeId.AirSlide:
       case NoteTypeId.AirSlideControl:
         note = new Ug.AirSlide;
+        (note as Ug.AirSlide)._height = 8;
         childNote = new Ug.AirSlideAction;
+        (childNote as Ug.AirSlideAction)._height = 8;
         break;
       case NoteTypeId.AirCrush:
       case NoteTypeId.AirCrushControl:
         note = new Ug.AirCrush;
+        (note as Ug.AirCrush)._height = 8;
         childNote = new Ug.AirCrushAction;
+        (childNote as Ug.AirCrushAction)._height = 8;
         break;
       case NoteTypeId.Damage:
         note = new Ug.Damage;
@@ -444,6 +449,120 @@ export class ChartViewMouseActionInsertNote extends ChartViewMouseAction {
       return;
     
     this._moveAction?._cancel();
-    this._view._currentChart._notes._removeChild(this._pendingNote);
+    this._pendingNote._parentNode?._removeChild(this._pendingNote);
+  }
+}
+
+
+
+export class ChartViewMouseActionInsertChildNote extends ChartViewMouseAction {
+  protected _pendingNote?: Ug.Note;
+  protected _moveAction?: ChartViewMouseActionMoveNote;
+
+  static _isOwnAction(view: ChartView, hitTestResult: HitTestResult) : boolean {
+    if (hitTestResult._targetType !== HitTestTargetType.LONG_BG || !hitTestResult._target)
+      return false;
+    
+    let activeNoteType = view._getActiveNoteType();
+    let note = hitTestResult._target as Ug.Note;
+    if (note instanceof Ug.Slide && (activeNoteType === NoteTypeId.Slide || activeNoteType === NoteTypeId.SlideStep))
+      return true;
+    if (note instanceof Ug.AirHold && activeNoteType === NoteTypeId.AirHold)
+      return true;
+    if (note instanceof Ug.AirSlide && (activeNoteType === NoteTypeId.AirSlide || activeNoteType === NoteTypeId.AirSlideControl))
+      return true;
+    if (note instanceof Ug.AirCrush && (activeNoteType === NoteTypeId.AirCrush || activeNoteType === NoteTypeId.AirCrushControl))
+      return true;
+    return false;
+  }
+
+  _start() {
+    if (!this._isInsertable(this._hitTestResult._curPos._snappedTick))
+      return;
+    
+    let note: Ug.Note|undefined;
+    switch (this._view._getActiveNoteType()) {
+      case NoteTypeId.Slide:
+        note = new Ug.SlideChild;
+        (note as Ug.SlideChild)._type = Ug.SlideChildType.CONTROL;
+        break;
+      case NoteTypeId.SlideStep:
+        note = new Ug.SlideChild;
+        (note as Ug.SlideChild)._type = Ug.SlideChildType.STEP;
+        break;
+      case NoteTypeId.AirHold:
+        note = new Ug.AirHoldAction;
+        (note as Ug.AirHoldAction)._type = Ug.AirActionType.STEP;
+        break;
+      case NoteTypeId.AirSlide:
+        note = new Ug.AirSlideAction;
+        (note as Ug.AirSlideAction)._type = Ug.AirActionType.STEP;
+        break;
+      case NoteTypeId.AirSlideControl:
+        note = new Ug.AirSlideAction;
+        (note as Ug.AirSlideAction)._type = Ug.AirActionType.CONTROL;
+        break;
+      case NoteTypeId.AirCrush:
+        note = new Ug.AirCrushAction;
+        (note as Ug.AirCrushAction)._type = Ug.AirCrushActionType.STEP;
+        break;
+      case NoteTypeId.AirCrushControl:
+        note = new Ug.AirCrushAction;
+        (note as Ug.AirCrushAction)._type = Ug.AirCrushActionType.CONTROL;
+        break;
+    }
+    if (!note)
+      return;
+    
+    let parentNote = this._hitTestResult._target as Ug.Note;
+    note._width = 4;
+    note._x = calcNoteX(this._hitTestResult._curPos._x, note._width);
+    note._tick = this._hitTestResult._curPos._snappedTick;
+    parentNote._appendChild(note);
+    parentNote._sortChildByTick();
+      
+    if (parentNote._isSlideGroup())
+      (parentNote as Ug.Slide)._prepareSlideBg();
+
+    this._view._invalidateView();
+
+    this._pendingNote = note;
+    this._hitTestResult._target = this._pendingNote;
+    this._hitTestResult._relativeX = 0.5;
+    this._hitTestResult._relativeY = 0.5;
+    
+    this._moveAction = new ChartViewMouseActionMoveNote(this._view, this._hitTestResult);
+    this._moveAction._start();
+  }
+
+  _move(mouseX: number, mouseY: number, curPos: RendererCursorPosition) {
+    this._moveAction?._move(mouseX, mouseY, curPos);
+  }
+
+  _end() {
+    if (!this._pendingNote)
+      return;
+    
+    this._view._currentUndoBuffer._stageAction(
+      new CommandActionNoteInsert(this._pendingNote, this._pendingNote._parentNode as Ug.Note));
+    this._moveAction?._end();
+  }
+
+  _cancel() {
+    if (!this._pendingNote)
+      return;
+    
+    this._moveAction?._cancel();
+    this._pendingNote._parentNode?._removeChild(this._pendingNote);
+  }
+
+  _isInsertable(newTick: number) {
+    let targetNote = this._hitTestResult._target as Ug.Note;
+    for(const child of targetNote._childNodes as Ug.Note[]) {
+      if (child._tick === newTick)
+        return false;
+    }
+    
+    return true;
   }
 }

@@ -9,6 +9,7 @@ import { UndoBuffer } from "../undo-buffer";
 
 const MOUSE_ACTION_LIST : (typeof MouseActions.ChartViewMouseAction)[] = [
   MouseActions.ChartViewMouseActionScrollThumb,
+  MouseActions.ChartViewMouseActionInsertChildNote,
   MouseActions.ChartViewMouseActionInsertNote,
   MouseActions.ChartViewMouseActionMoveNote,
   MouseActions.ChartViewMouseActionResizeNote,

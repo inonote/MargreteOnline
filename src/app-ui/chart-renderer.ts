@@ -327,6 +327,31 @@ export class ChartRenderer {
   }
 
   protected _hitTestAirHoldBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (note._width !== w || !(note instanceof Ug.AirHold) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+        
+        let centerX = rm._rect._left + rm._rect._width * (note._x + note._width / 2.0) / 16.0;
+        let left = centerX - CHART_FIELD_SLIDE_HITTEST_CENTER_X;
+        let right = centerX + CHART_FIELD_SLIDE_HITTEST_CENTER_X;
+        let beginY = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+        let endY = ChartRenderer._calcFieldYFromTick(rm, (note._lastChild as Ug.HoldChild)._tick);
+        
+        if (!MathUtil._ptInRect(
+          result._mousePos._x, result._mousePos._y,
+          left, endY, right, beginY))
+          continue;
+
+        result._targetType = HitTestTargetType.LONG_BG;
+        result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+        result._relativeY = MathUtil.relative(endY, beginY, result._mousePos._y);
+        result._offsetMouseX = result._mousePos._x - left;
+        result._offsetMouseY = result._mousePos._y - endY;
+        result._target = note;
+        return true;
+      }
+    }
     return false;
   }
 
@@ -440,14 +465,137 @@ export class ChartRenderer {
   }
 
   _hitTestAirCrushBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+      if (!(note instanceof Ug.AirCrush) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        continue;
+
+      let lastV = note as Ug.AirCrush|Ug.AirCrushAction;
+      for(const v of note._childNodes as Ug.AirCrushAction[]) {
+        let endY = ChartRenderer._calcFieldYFromTick(rm, v._tick);
+        let beginY = ChartRenderer._calcFieldYFromTick(rm, lastV._tick);
+
+        if (result._mousePos._y < endY || result._mousePos._y > beginY) {
+          lastV = v;
+          continue;
+        }
+        
+        let pt = MathUtil.relative(endY, beginY, result._mousePos._y);
+        let centerX = MathUtil.mixi(rm._rect._left, rm._rect._right, MathUtil.mix(v._x + v._width / 2.0, lastV._x + lastV._width / 2.0, pt) / 16.0);
+        let left = centerX - CHART_FIELD_SLIDE_HITTEST_CENTER_X;
+        let right = centerX + CHART_FIELD_SLIDE_HITTEST_CENTER_X;
+
+        if (result._mousePos._x >= left && result._mousePos._x <= right) {
+          result._targetType = HitTestTargetType.LONG_BG;
+          result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+          result._relativeY = MathUtil.relative(endY, beginY, result._mousePos._y);
+          result._offsetMouseX = result._mousePos._x - left;
+          result._offsetMouseY = result._mousePos._y - endY;
+          result._target = note;
+          return true;
+        }
+
+        lastV = v;
+      }
+    }
     return false;
   }
 
   _hitTestAirSlideBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+      if (!(note instanceof Ug.AirSlide) || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        continue;
+
+      let lastV = note as Ug.AirSlide|Ug.AirSlideAction;
+      for(const v of note._childNodes as Ug.AirSlideAction[]) {
+        let endY = ChartRenderer._calcFieldYFromTick(rm, v._tick);
+        let beginY = ChartRenderer._calcFieldYFromTick(rm, lastV._tick);
+
+        if (result._mousePos._y < endY || result._mousePos._y > beginY) {
+          lastV = v;
+          continue;
+        }
+        
+        let pt = MathUtil.relative(endY, beginY, result._mousePos._y);
+        let left = MathUtil.mixi(rm._rect._left, rm._rect._right, MathUtil.mix(v._x, lastV._x, pt) / 16.0);
+        let right = MathUtil.mixi(rm._rect._left, rm._rect._right, MathUtil.mix(v._x + v._width, lastV._x + lastV._width, pt) / 16.0);
+
+        if (result._mousePos._x >= left && result._mousePos._x <= right) {
+          result._targetType = HitTestTargetType.LONG_BG;
+          result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+          result._relativeY = MathUtil.relative(endY, beginY, result._mousePos._y);
+          result._offsetMouseX = result._mousePos._x - left;
+          result._offsetMouseY = result._mousePos._y - endY;
+          result._target = note;
+          return true;
+        }
+
+        lastV = v;
+      }
+    }
     return false;
   }
 
   _hitTestGroundedLongBg(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for (let w = 16; w > 0; --w) {
+      for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+        if (!note._isGroundedLongParent() || (note._lastChild as Ug.Note)._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+          continue;
+  
+        if (note instanceof Ug.Hold) {
+          let left = rm._rect._left + rm._rect._width * note._x / 16.0 + 1.5;
+          let right = rm._rect._left + rm._rect._width * (note._x + note._width) / 16.0 - 1.5;
+          let beginY = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+          let endY = ChartRenderer._calcFieldYFromTick(rm, (note._firstChild as Ug.HoldChild)._tick);
+          
+          if (!MathUtil._ptInRect(
+            result._mousePos._x, result._mousePos._y,
+            left, endY, right, beginY))
+            continue;
+
+          result._targetType = HitTestTargetType.LONG_BG;
+          result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+          result._relativeY = MathUtil.relative(endY, beginY, result._mousePos._y);
+          result._offsetMouseX = result._mousePos._x - left;
+          result._offsetMouseY = result._mousePos._y - endY;
+          result._target = note;
+          return true;
+        }
+        else if (note instanceof Ug.Slide) {
+          let isFirst = true;
+          let lastV = note._slideBgVertices[0];
+          for(const v of note._slideBgVertices) {
+            if (isFirst) {
+              isFirst = false;
+              continue;
+            }
+
+            let endY = ChartRenderer._calcFieldYFromTick(rm, v._tick);
+            let beginY = ChartRenderer._calcFieldYFromTick(rm, lastV._tick);
+
+            if (result._mousePos._y < endY || result._mousePos._y > beginY) {
+              lastV = v;
+              continue;
+            }
+            
+            let pt = MathUtil.relative(endY, beginY, result._mousePos._y);
+            let left = MathUtil.mixi(rm._rect._left, rm._rect._right, MathUtil.mix(v._left, lastV._left, pt));
+            let right = MathUtil.mixi(rm._rect._left, rm._rect._right, MathUtil.mix(v._right, lastV._right, pt));
+
+            if (result._mousePos._x >= left && result._mousePos._x <= right) {
+              result._targetType = HitTestTargetType.LONG_BG;
+              result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+              result._relativeY = MathUtil.relative(endY, beginY, result._mousePos._y);
+              result._offsetMouseX = result._mousePos._x - left;
+              result._offsetMouseY = result._mousePos._y - endY;
+              result._target = note;
+              return true;
+            }
+
+            lastV = v;
+          }
+        }
+      }
+    }
     return false;
   }
 
@@ -971,9 +1119,6 @@ export class ChartRenderer {
         MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, note._height / CHART_FIELD_SIDEVIEW_LANES),
         ChartRenderer._calcFieldYFromTick(rm, note._tick));
       for(const childNote of note._childNodes as Ug.AirSlideAction[]) {
-        if (childNote._type === Ug.AirActionType.STEP && note._lastChild !== childNote)
-          continue;
-
         ctx.lineTo(
           MathUtil.mixi(rm._sideRect._right, rm._sideRect._left, childNote._height / CHART_FIELD_SIDEVIEW_LANES),
           ChartRenderer._calcFieldYFromTick(rm, childNote._tick));

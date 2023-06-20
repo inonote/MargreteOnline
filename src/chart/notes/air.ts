@@ -102,7 +102,6 @@ export class AirCrush extends Note {
     to._variationId = this._variationId;
   }
 
-  _isAir() { return true; }
   _isAirCrushGroup() { return true; }
   _isAirLongParent() { return true; }
   _isResizable() { return true; }

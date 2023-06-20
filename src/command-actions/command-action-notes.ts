@@ -63,12 +63,18 @@ export class CommandActionNoteInsert extends CommandAction {
   _undo(chart: Ug.Chart) : boolean {
     (this._parentNote || chart._notes)._removeChild(this._note);
     this._note._makePair(undefined);
+
+    if (this._parentNote)
+      this._parentNote._sortChildByTick();
     return true;
   }
   
   _redo(chart: Ug.Chart) : boolean {
     (this._parentNote || chart._notes)._appendChild(this._note);
     this._note._makePair(this._pairNote);
+    
+    if (this._parentNote)
+      this._parentNote._sortChildByTick();
     return true;
   }
 }
