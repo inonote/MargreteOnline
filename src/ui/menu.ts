@@ -194,6 +194,7 @@ export class MenuItem {
   }
 
   protected _closePopup() {
+    console.log("!")
     let item = this._selectedItem;
     if (!item || !item._hasChildren())
       return;
@@ -291,7 +292,7 @@ export class MenuItem {
     }
 
     if (this._selectedItem) {
-      this._selectedItem._getHtmlElement().classList.remove("ui-show-dropdown");  
+      this._selectedItem._getPopupHtmlElement().classList.remove("ui-show-dropdown");  
       if (this._elmPopup)
         this._elmPopup.focus();
       this._selectedItem._activateMenu(undefined);
@@ -299,7 +300,7 @@ export class MenuItem {
 
     this._selectedItem = item;
     if (item && item._hasChildren()) {
-      item._getHtmlElement().classList.add("ui-show-dropdown");
+      item._getPopupHtmlElement().classList.add("ui-show-dropdown");
       item._layoutPopup();
       if (item._elmPopup)
         item._elmPopup.focus();
@@ -384,6 +385,8 @@ export class MenuItem {
 
   _hoverItem(item: MenuItem, noPopup: boolean = false) { this._onItemHover(item, noPopup); }
 
+  protected _getPopupRootElement() : HTMLDivElement|undefined { return this._parent?.deref()?._getPopupRootElement(); }
+
   _getHtmlElement() { return this._elm; }
   _getItemHtmlElement() { return this._elmItem; }
   _hasChildren() { return this._items.length > 0; }
@@ -405,9 +408,9 @@ export class MenuItem {
   
   _getPopupHtmlElement() : HTMLDivElement {
     if (!this._elmPopup) {
-      this._elmPopup = createDivElement("ui-menu-popup");
+      this._elmPopup = createDivElement("ui-menu-popup" + (this._parent?.deref()?._isRoot ? " ui-no-anim" : ""));
       this._elmPopup.setAttribute("tabindex", "0");
-      this._elm.appendChild(this._elmPopup);
+      this._getPopupRootElement()?.appendChild(this._elmPopup);
 
       this._elmPopup.addEventListener("mouseleave", (e) => {
         this._onPopupLeave();
@@ -495,6 +498,7 @@ export class MenuItemSpacer extends MenuItem {
 
 export class MenuBar extends MenuItem {
   protected _frame: Frame;
+  protected _elmPopupRoot: HTMLDivElement;
 
   protected _menuPopupDelay: number = 0;
   protected _isRoot: boolean = true;
@@ -504,6 +508,9 @@ export class MenuBar extends MenuItem {
 
     this._frame = frame;
     this._frame._getHtmlElement().appendChild(this._elm);
+
+    this._elmPopupRoot = createDivElement("ui-menu-popup-root");
+    this._elm.appendChild(this._elmPopupRoot);
 
     window.addEventListener("mousedown", e => this._onClickBackground(e), { capture: true });
     window.addEventListener("keydown", e => {
@@ -518,6 +525,8 @@ export class MenuBar extends MenuItem {
   protected _createElement() : HTMLDivElement {
     return createDivElement("ui-menubar");
   }
+
+  protected _getPopupRootElement() : HTMLDivElement|undefined { return this._elmPopupRoot; }
 
   protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
     if (item._hasChildren() || !isPrimaryButton)
@@ -557,10 +566,10 @@ export class MenuBar extends MenuItem {
   protected _onClickBackground(e: MouseEvent) {
     if (!this._selectedItem)
       return;
-    
-    if (!(e.target instanceof Node) || !this._selectedItem._getHtmlElement().contains(e.target)) {
+    if (!(e.target instanceof Node) || !this._getPopupRootElement()?.contains(e.target)) {
       this._popupDelayTimerFor = undefined;
       this._activateMenu(undefined);
+      e.stopPropagation();
       return;
     }
   }
@@ -614,7 +623,6 @@ export class ContextMenu extends MenuItem {
 
   constructor(frame: Frame) {
     super("");
-    this._getPopupHtmlElement().classList.add("ui-hide");
     this._getPopupHtmlElement().setAttribute("tabindex", "0");
     this._getPopupHtmlElement().addEventListener("mouseleave", (e) => {
       this._onPopupLeave();
@@ -634,15 +642,18 @@ export class ContextMenu extends MenuItem {
   }
 
   protected _createElement() : HTMLDivElement {
-    return createDivElement("ui-popupmenu ui-menu-popup");
+    return createDivElement("ui-popupmenu");
   }
+
+  protected _getPopupRootElement() : HTMLDivElement|undefined { return this._elm; }
 
   protected _onClickBackground(e: MouseEvent) {
     if (!this._visible)
       return;
     
-    if (!(e.target instanceof Node) || !this._getPopupHtmlElement().contains(e.target)) {
+    if (!(e.target instanceof Node) || !this._getPopupRootElement()?.contains(e.target)) {
       this._escapeMenu();
+      e.stopPropagation();
       return;
     }
   }
@@ -664,15 +675,14 @@ export class ContextMenu extends MenuItem {
 
   _showPopup(x: number, y: number) {
     this._visible = true;
-    this._getPopupHtmlElement().classList.remove("ui-hide");
+    this._getPopupHtmlElement().classList.add("ui-show");
     this._layoutPopup(new Position(x, y));
     this._getPopupHtmlElement().focus();
   }
 
   _cancelPopup() {
     this._visible = false;
-    this._getPopupHtmlElement().classList.add("ui-hide");
+    this._getPopupHtmlElement().classList.remove("ui-show");
   }
 
-  _getPopupHtmlElement() : HTMLDivElement { return this._elm; }
 }

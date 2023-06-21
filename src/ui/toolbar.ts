@@ -43,6 +43,7 @@ export class ToolBarButtonSeparator extends MenuItemSeparator {
 
 export class ToolBar extends MenuItem {
   protected _frame: Frame;
+  protected _elmPopupRoot: HTMLDivElement;
   
   protected _menuPopupDelay: number = 0;
   protected _isRoot: boolean = true;
@@ -53,12 +54,17 @@ export class ToolBar extends MenuItem {
     this._frame = frame;
     this._frame._getHtmlElement().appendChild(this._elm);
 
+    this._elmPopupRoot = createDivElement("ui-menu-popup-root");
+    this._elm.appendChild(this._elmPopupRoot);
+
     window.addEventListener("mousedown", e => this._onClickBackground(e), { capture: true });
   }
 
   protected _createElement() : HTMLDivElement {
     return createDivElement("ui-toolbar");
   }
+
+  protected _getPopupRootElement() : HTMLDivElement|undefined { return this._elmPopupRoot; }
 
   protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
     if (item._hasChildren() || !isPrimaryButton)
@@ -102,6 +108,7 @@ export class ToolBar extends MenuItem {
     if (!(e.target instanceof Node) || !this._selectedItem._getHtmlElement().contains(e.target)) {
       this._popupDelayTimerFor = undefined;
       this._activateMenu(undefined);
+      e.stopPropagation();
       return;
     }
   }
