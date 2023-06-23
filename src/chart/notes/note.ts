@@ -18,6 +18,8 @@ export class Note extends ChartObject {
   _timelineId: number = 0;
   protected _pairNoteRef?: WeakRef<Note>;
 
+  _isDirty: boolean = true;
+
   _create() { return new Note(); }
 
   _isTap() { return false; }

@@ -64,8 +64,6 @@ export class ToolBar extends MenuItem {
     return createDivElement("ui-toolbar");
   }
 
-  protected _getPopupRootElement() : HTMLDivElement|undefined { return this._elmPopupRoot; }
-
   protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
     if (item._hasChildren() || !isPrimaryButton)
       return;
@@ -155,4 +153,5 @@ export class ToolBar extends MenuItem {
   }
 
   _getPopupHtmlElement() : HTMLDivElement { return this._elm; }
+  protected _getPopupRootElement() : HTMLDivElement|undefined { return this._elmPopupRoot; }
 }

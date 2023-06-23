@@ -236,7 +236,25 @@ export class ChartView {
     this._viewState._screenWidth = this._elmSizeTracer.clientWidth;
     this._viewState._screenHeight = this._elmSizeTracer.clientHeight;
 
-    if (!this._dirty)
+    let isDirty = this._dirty;
+    
+    for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+      let isOverallDirty = note._isDirty;
+      note._isDirty = false;
+
+      for(const child of note._childNodes as Ug.Note[]) {
+        isOverallDirty ||= child._isDirty;
+        child._isDirty = false;
+      }
+
+      if (isOverallDirty && note instanceof Ug.Slide) {
+        note._prepareSlideBg();
+      }
+
+      isDirty ||= isOverallDirty;
+    }
+    
+    if (!isDirty)
       return;
     this._dirty = false;
     

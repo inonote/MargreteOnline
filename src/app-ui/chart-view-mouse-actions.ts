@@ -111,10 +111,7 @@ export class ChartViewMouseActionMoveNote extends ChartViewMouseAction {
       if (this._hitTestResult._target._isLongChild())
         (this._hitTestResult._target._parentNode as Ug.Note)?._sortChildByTick();
 
-      if (this._hitTestResult._target._isSlideGroup())
-        (this._hitTestResult._target as Ug.Slide|Ug.SlideChild)._prepareSlideBg();
-
-      this._view._invalidateView();
+      this._hitTestResult._target._isDirty = true;
     }
   }
 
@@ -127,7 +124,6 @@ export class ChartViewMouseActionMoveNote extends ChartViewMouseAction {
     
     this._view._currentUndoBuffer._stageAction(
       new CommandActionNoteProperty(this._hitTestResult._target, this._oldProperty, true));
-    this._view._invalidateView();
   }
 
   _cancel() {
@@ -142,10 +138,7 @@ export class ChartViewMouseActionMoveNote extends ChartViewMouseAction {
     if (this._hitTestResult._target._isLongChild())
       (this._hitTestResult._target._parentNode as Ug.Note)?._sortChildByTick();
 
-    if (this._hitTestResult._target._isSlideGroup())
-      (this._hitTestResult._target as Ug.Slide|Ug.SlideChild)._prepareSlideBg();
-
-    this._view._invalidateView();
+    this._hitTestResult._target._isDirty = true;
   }
 
   protected _isMovableX(newX: number, parentNoCheck: boolean = false) : boolean {
@@ -253,10 +246,7 @@ export class ChartViewMouseActionResizeNote extends ChartViewMouseActionMoveNote
 
     }
 
-    if (this._hitTestResult._target._isSlideGroup())
-      (this._hitTestResult._target as Ug.Slide|Ug.SlideChild)._prepareSlideBg();
-
-    this._view._invalidateView();
+    this._hitTestResult._target._isDirty = true;
   }
 
   _end() {
@@ -265,7 +255,6 @@ export class ChartViewMouseActionResizeNote extends ChartViewMouseActionMoveNote
     
     this._view._currentUndoBuffer._stageAction(
       new CommandActionNoteProperty(this._hitTestResult._target, this._oldProperty, false));
-    this._view._invalidateView();
   }
 
   _cancel() {
@@ -274,10 +263,7 @@ export class ChartViewMouseActionResizeNote extends ChartViewMouseActionMoveNote
     
     this._oldProperty._copyPropertiesTo(this._hitTestResult._target);
 
-    if (this._hitTestResult._target._isSlideGroup())
-      (this._hitTestResult._target as Ug.Slide|Ug.SlideChild)._prepareSlideBg();
-
-    this._view._invalidateView();
+    this._hitTestResult._target._isDirty = true;
   }
 }
 
@@ -412,16 +398,11 @@ export class ChartViewMouseActionInsertNote extends ChartViewMouseAction {
       childNote._tick = note._tick + this._view._currentViewState._snapTick;
       note._appendChild(childNote);
       
-      if (note._isSlideGroup())
-        (note as Ug.Slide)._prepareSlideBg();
-      
       this._pendingNote = childNote;
     }
     else {
       this._pendingNote = note;
     }
-
-    this._view._invalidateView();
 
     this._hitTestResult._target = this._pendingNote;
     this._hitTestResult._relativeX = 0.5;
@@ -520,11 +501,6 @@ export class ChartViewMouseActionInsertChildNote extends ChartViewMouseAction {
     note._tick = this._hitTestResult._curPos._snappedTick;
     parentNote._appendChild(note);
     parentNote._sortChildByTick();
-      
-    if (parentNote._isSlideGroup())
-      (parentNote as Ug.Slide)._prepareSlideBg();
-
-    this._view._invalidateView();
 
     this._pendingNote = note;
     this._hitTestResult._target = this._pendingNote;

@@ -59,11 +59,6 @@ export class ChartMgxcParser {
 
     ChartMgxcParser._lastParentNote = undefined;
     ChartMgxcParser._lastNote = undefined;
-
-    for(const note of chart._notes._childNodes) {
-      if (note instanceof Ug.Slide)
-        note._prepareSlideBg();
-    }
     return chart;
   }
 

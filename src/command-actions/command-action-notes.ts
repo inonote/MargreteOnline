@@ -25,10 +25,7 @@ export class CommandActionNoteProperty extends CommandAction {
       this._note._offsetChildrenX(this._oldProperty._x - this._newProperty._x);
     }
 
-    if (this._note instanceof Ug.Slide)
-      this._note._prepareSlideBg();
-    else if (this._note instanceof Ug.SlideChild)
-      (this._note._parentNode as Ug.Slide|undefined)?._prepareSlideBg();
+    this._note._isDirty = true;
     return true;
   }
   
@@ -40,10 +37,7 @@ export class CommandActionNoteProperty extends CommandAction {
       this._note._offsetChildrenX(this._newProperty._x - this._oldProperty._x);
     }
 
-    if (this._note instanceof Ug.Slide)
-      this._note._prepareSlideBg();
-    else if (this._note instanceof Ug.SlideChild)
-      (this._note._parentNode as Ug.Slide|undefined)?._prepareSlideBg();
+    this._note._isDirty = true;
     return true;
   }
 }
@@ -64,8 +58,12 @@ export class CommandActionNoteInsert extends CommandAction {
     (this._parentNote || chart._notes)._removeChild(this._note);
     this._note._makePair(undefined);
 
-    if (this._parentNote)
+    if (this._parentNote) {
       this._parentNote._sortChildByTick();
+      this._parentNote._isDirty = true;
+    }
+
+    this._note._isDirty = true;
     return true;
   }
   
@@ -73,8 +71,10 @@ export class CommandActionNoteInsert extends CommandAction {
     (this._parentNote || chart._notes)._appendChild(this._note);
     this._note._makePair(this._pairNote);
     
-    if (this._parentNote)
+    if (this._parentNote) {
       this._parentNote._sortChildByTick();
+      this._parentNote._isDirty = true;
+    }
     return true;
   }
 }

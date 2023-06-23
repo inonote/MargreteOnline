@@ -16,6 +16,7 @@ class MainFrame extends Frame {
   _onInit() : void {
     console.log("init");
     this._menuBar = new MenuBar(this);
+    this._menuBar._addEventHandler("ui-click", (e) => this._onCommand(e._target as MenuItem));
     this._menuBar._appendNestedMenuItems([
       [
         "ファイル",
@@ -107,12 +108,12 @@ class MainFrame extends Frame {
       new MenuItemSpacer(),
       new MenuItem("visible-toolbar", "[ - ]"),
     ]);
-    this._menuBar._eventOnItemClick = (p) => this._onCommand(p);
 
     this._menuBar._setCheckAll("lang-ja-jp", true);
     this._menuBar._setCheckAll("pen", true);
 
     this._toolBar = new ToolBar(this);
+    this._toolBar._addEventHandler("ui-click", (e) => this._onCommand(e._target as MenuItem));
     this._toolBar._appendNestedMenuItems([
       new ToolBarButton("sync", "arrow-repeat", "データの同期"),
       new ToolBarButtonSeparator(),
@@ -183,9 +184,8 @@ class MainFrame extends Frame {
       ],*/
     ]);
     
-    this._toolBar._eventOnItemClick = (p) => this._onCommand(p);
-    
     this._toolBarNotes = new ToolBar(this);
+    this._toolBarNotes._addEventHandler("ui-click", (e) => this._onCommand(e._target as MenuItem));
     this._toolBarNotes._appendNestedMenuItems([
       new ToolBarButton("note-Tap", "x-tap", "TAP"),
       new ToolBarButton("note-ExTap", "x-extap", "ExTAP"),
@@ -213,11 +213,10 @@ class MainFrame extends Frame {
       new ToolBarButton("note-Click", "x-click", "CLICK")
     ]);
     
-    this._toolBarNotes._eventOnItemClick = (p) => this._onCommand(p);
-    
     this._toolBar._setCheckAll("pen", true);
 
     this._contextMenu = new ContextMenu(this);
+    this._contextMenu._addEventHandler("ui-click", (e) => this._onCommand(e._target as MenuItem));
     this._contextMenu._appendNestedMenuItems([
       new MenuItem("undo", "元に戻す", "Ctrl + Z"),
       new MenuItem("redo", "やり直す", "Ctrl + Y"),
