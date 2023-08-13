@@ -39,8 +39,8 @@ export class ChartNode {
     return newNode;
   }
 
-  _insertBefore(newNode: ChartNode, referenceNode: ChartNode|null) : ChartNode|null {
-    if (referenceNode === null)
+  _insertBefore(newNode: ChartNode, referenceNode: ChartNode|null|undefined) : ChartNode|null {
+    if (!referenceNode)
       return this._appendChild(newNode);
     
     let parent = newNode._parent?.deref();
@@ -68,7 +68,7 @@ export class ChartNode {
   _removeChild(child: ChartNode) : boolean {
     let childIndex = this._children.findIndex(x => x === child);
     if (childIndex === -1)
-      throw false;
+      return false;
     
     this._children.splice(childIndex, 1);
     child._parent = undefined;
@@ -124,6 +124,13 @@ export class ChartNode {
   _sortChild(compareFn?: ((a: ChartNode, b: ChartNode) => number) | undefined) {
     this._children.sort(compareFn);
     this._validateSiblingRelation();
+  }
+
+  _swap(node: ChartNode, newNode: ChartNode): boolean {
+    let nextNode = node._nextSibling?.deref();
+    this._removeChild(node);
+    this._insertBefore(newNode, nextNode);
+    return true;
   }
 
   /** 兄弟関係を整理 */

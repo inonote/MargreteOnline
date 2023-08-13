@@ -67,8 +67,7 @@ export class ChartViewMouseActionMoveNote extends ChartViewMouseAction {
     if (!(hitTestResult._target instanceof Ug.Note))
       return false;
     
-    return hitTestResult._targetType === HitTestTargetType.NOTE &&
-      (!hitTestResult._target._isResizable() || (hitTestResult._relativeX > 0.25 && hitTestResult._relativeX < 0.75));
+    return hitTestResult._targetType === HitTestTargetType.NOTE;
   }
   
   static _getCusror(hitTestResult: HitTestResult) : ChartViewCursorType {

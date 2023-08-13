@@ -27,7 +27,7 @@ export class ToolBarButton extends MenuItem {
       this._elmItemText.innerText = this._label;
     this._elmItemText.title = this._label;
     this._elmItemAccessKey.classList.add("ui-hide");
-    this._elm.classList.toggle("ui-checked", this._isChecked);
+    this._elm.classList.toggle("ui-checked", this._checked);
   }
 }
 

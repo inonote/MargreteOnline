@@ -1,4 +1,6 @@
 const path = require("path");
+const TerserPlugin = require("terser-webpack-plugin");
+
 module.exports = {
   entry: {
     bundle: "./src/app.ts"
@@ -22,5 +24,23 @@ module.exports = {
         loader: "ts-loader"
       }
     ]
-  }
+  },
+  
+  /*optimization: {
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: true,
+          output: {
+            comments: false,
+            beautify: false
+          },
+          mangle: {
+            properties: { regex: /^_/ },
+          }
+        }
+      })
+    ]
+  }*/
 };

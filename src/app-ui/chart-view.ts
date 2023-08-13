@@ -6,13 +6,15 @@ import { ChartMgxcParser } from "../chart/parser/mgxc";
 import { TEST_CHART } from "./test-chart";
 import * as MouseActions from "./chart-view-mouse-actions";
 import { UndoBuffer } from "../undo-buffer";
+import { MenuItem, MenuItemSeparator, MenuItemStatic, ContextMenu } from "../ui/menu";
+import { CommandActionNoteConvertType, CommandActionNoteProperty } from "../command-actions/command-action-notes";
 
 const MOUSE_ACTION_LIST : (typeof MouseActions.ChartViewMouseAction)[] = [
   MouseActions.ChartViewMouseActionScrollThumb,
   MouseActions.ChartViewMouseActionInsertChildNote,
   MouseActions.ChartViewMouseActionInsertNote,
-  MouseActions.ChartViewMouseActionMoveNote,
   MouseActions.ChartViewMouseActionResizeNote,
+  MouseActions.ChartViewMouseActionMoveNote,
 ];
 
 export type ChartViewCursorType = "default"|"move"|"ew-resize"|"ns-resize"|"not-allowed";
@@ -97,12 +99,37 @@ export enum NoteTypeId {
 }
 
 
+enum MenuItemIdToExTapDirection {
+  "attr-Dir-Up" = Ug.ExTapDirection.UP,
+  "attr-Dir-Down" = Ug.ExTapDirection.DOWN,
+  "attr-Dir-Center" = Ug.ExTapDirection.CENTER,
+  "attr-Dir-Left" = Ug.ExTapDirection.LEFT,
+  "attr-Dir-Right" = Ug.ExTapDirection.RIGHT,
+  "attr-Dir-Rotate-Left" = Ug.ExTapDirection.ROTATE_LEFT,
+  "attr-Dir-Rotate-Right" = Ug.ExTapDirection.ROTATE_RIGHT,
+  "attr-Dir-In-Out" = Ug.ExTapDirection.INOUT,
+  "attr-Dir-Out-In" = Ug.ExTapDirection.OUTIN,
+}
+
+
+enum MenuItemIdToAirDirection {
+  "attr-Dir-Up" = Ug.AirDirection.UP,
+  "attr-Dir-UpLeft" = Ug.AirDirection.UPLEFT,
+  "attr-Dir-UpRight" = Ug.AirDirection.UPRIGHT,
+  "attr-Dir-Down" = Ug.AirDirection.DOWN,
+  "attr-Dir-DownLeft" = Ug.AirDirection.DOWNLEFT,
+  "attr-Dir-DownRight" = Ug.AirDirection.DOWNRIGHT
+}
+
+
 
 export class ChartView {
   protected _frame: Frame;
 
   protected _elmCanvas: HTMLCanvasElement;
   protected _elmSizeTracer: HTMLDivElement;
+
+  protected _contextMenu: ContextMenu;
 
   protected _dirty: boolean = true;
 
@@ -135,6 +162,7 @@ export class ChartView {
     this._elmCanvas.addEventListener("pointerdown", e => this._onPointerDown(e));
     this._elmCanvas.addEventListener("pointerup", e => this._onPointerUp(e));
     this._elmCanvas.addEventListener("pointermove", e => this._onPointerMove(e));
+    this._elmCanvas.addEventListener("contextmenu", (e) => this._onContextMenu(e));
     window.addEventListener("keydown", e => this._onKeyDown(e) || (e.preventDefault(), e.stopPropagation()));
 
     let chart = ChartMgxcParser._parse(TEST_CHART);
@@ -144,6 +172,70 @@ export class ChartView {
     this._undoBuffer = new UndoBuffer(this._chart);
 
     this._viewState._lastTick = this._chart._getLastTick();
+
+    this._contextMenu = new ContextMenu(this._frame);
+    this._contextMenu._appendNestedMenuItems([
+      new MenuItem("cut-notes", "ノーツを切り取り", "Ctrl + X"),
+      new MenuItem("copy-notes", "ノーツをコピー", "Ctrl + C"),
+      new MenuItem("copy-events", "イベントをコピー", "Ctrl + Shift + C"),
+      new MenuItem("paste", "貼り付け", "Ctrl + V"),
+      new MenuItem("paste-fliped", "左右反転貼り付け", "Ctrl + Shift + V"),
+      new MenuItemSeparator(),
+      [
+        new MenuItem("menu-note-conv-tap", "ノーツ変換"),
+        new MenuItem("conv-Tap", "TAP"),
+        new MenuItem("conv-ExTap", "ExTAP"),
+        new MenuItem("conv-Flick", "FLICK"),
+        new MenuItem("conv-Damage", "DAMAGE"),
+      ],
+      [
+        new MenuItem("menu-note-attr-flick", "ノーツ属性"),
+        new MenuItemStatic("自動プレイ時エフェクト方向"),
+        new MenuItem("attr-Dir-Auto", "自動"),
+        new MenuItem("attr-Dir-Left", "左"),
+        new MenuItem("attr-Dir-Right", "右"),
+      ],
+      [
+        new MenuItem("menu-note-attr-extap", "ノーツ属性"),
+        new MenuItemStatic("背景エフェクト方向"),
+        new MenuItem("attr-Dir-Up", "上"),
+        new MenuItem("attr-Dir-Down", "下"),
+        new MenuItem("attr-Dir-Center", "集中線"),
+        new MenuItem("attr-Dir-Left", "左"),
+        new MenuItem("attr-Dir-Right", "右"),
+        new MenuItem("attr-Dir-Rotate-Left", "回転 - 反時計回り"),
+        new MenuItem("attr-Dir-Rotate-Right", "回転 - 時計回り"),
+        new MenuItem("attr-Dir-In-Out", "内側から外側"),
+        new MenuItem("attr-Dir-Out-In", "外側から内側"),
+      ],
+      [
+        new MenuItem("menu-note-attr-air", "ノーツ属性"),
+        new MenuItemStatic("方向"),
+        new MenuItem("attr-Dir-Up", "上"),
+        new MenuItem("attr-Dir-UpLeft", "左上"),
+        new MenuItem("attr-Dir-UpRight", "右上"),
+        new MenuItem("attr-Dir-Down", "下"),
+        new MenuItem("attr-Dir-DownLeft", "左下"),
+        new MenuItem("attr-Dir-DownRight", "右下"),
+        new MenuItemSeparator(),
+        new MenuItem("attr-Invert", "色反転"),
+      ],
+      [
+        new MenuItem("menu-note-attr-airhold", "ノーツ属性"),
+        new MenuItem("attr-Invert", "色反転"),
+      ],
+      [
+        new MenuItem("menu-note-attr-slide", "ノーツ属性"),
+        new MenuItem("attr-Step", "中継点"),
+        new MenuItem("attr-Control", "制御点"),
+      ],
+      [
+        new MenuItem("menu-note-attr-aircrush", "ノーツ属性"),
+        new MenuItem("attr-Step", "ノーツ有"),
+        new MenuItem("attr-Control", "ノーツ無"),
+      ],
+      new MenuItem("menu-note-attr-none", "(変形項目なし)", undefined, { _disabled: true }),
+    ]);
   }
 
   _invalidateView() {
@@ -230,6 +322,120 @@ export class ChartView {
       return true;
     }
     return false;
+  }
+  
+ async  _onContextMenu(e: MouseEvent) {
+    let hitTestResult = this._renderer._hitTest(e.offsetX, e.offsetY);
+    let menuStates = new Map(Object.entries({
+      "menu-note-conv-tap": false,
+      "menu-note-attr-flick": false,
+      "menu-note-attr-extap": false,
+      "menu-note-attr-air": false,
+      "menu-note-attr-airhold": false,
+      "menu-note-attr-slide": false,
+      "menu-note-attr-aircrush": false,
+    }));
+
+    if (hitTestResult._target instanceof Ug.Note && hitTestResult._target._isTap())
+      menuStates.set("menu-note-conv-tap", true);
+
+    if (hitTestResult._target instanceof Ug.Flick)
+      menuStates.set("menu-note-attr-flick", true);
+    else if (hitTestResult._target instanceof Ug.ExTap)
+      menuStates.set("menu-note-attr-extap", true);
+    else if (hitTestResult._target instanceof Ug.Air)
+      menuStates.set("menu-note-attr-air", true);
+    else if (hitTestResult._target instanceof Ug.AirHoldAction)
+      menuStates.set("menu-note-attr-airhold", true);
+    else if (hitTestResult._target instanceof Ug.SlideChild)
+      menuStates.set("menu-note-attr-slide", true);
+    else if (hitTestResult._target instanceof Ug.AirCrush || hitTestResult._target instanceof Ug.AirCrushAction)
+      menuStates.set("menu-note-attr-aircrush", true);
+
+    let hasVisibleMenus = false;
+    menuStates.forEach((value, key) => {
+      this._contextMenu?._setVisibleAll(key, value);
+      hasVisibleMenus ||= value;
+    });
+    this._contextMenu?._setVisibleAll("menu-note-attr-none", !hasVisibleMenus);
+
+    let ret = await this._contextMenu?._showPopupWait(e.clientX, e.clientY);
+
+    if (!ret)
+      return;
+
+    this._undoBuffer._beginRecording();
+    switch (ret._getId()) {
+      case "conv-Tap":
+        if (hitTestResult._target instanceof Ug.Note && hitTestResult._target._convertable(Ug.Tap)) {
+          this._undoBuffer._stageAction(
+            new CommandActionNoteConvertType(hitTestResult._target, Ug.Tap));
+        }
+        break;
+      case "conv-ExTap":
+        if (hitTestResult._target instanceof Ug.Note && hitTestResult._target._convertable(Ug.ExTap)) {
+          this._undoBuffer._stageAction(
+            new CommandActionNoteConvertType(hitTestResult._target, Ug.ExTap));
+        }
+        break;
+      case "conv-Flick":
+        if (hitTestResult._target instanceof Ug.Note && hitTestResult._target._convertable(Ug.Flick)) {
+          console.log("cnb");
+          this._undoBuffer._stageAction(
+            new CommandActionNoteConvertType(hitTestResult._target, Ug.Flick));
+        }
+        break;
+      case "conv-Damage":
+        if (hitTestResult._target instanceof Ug.Note && hitTestResult._target._convertable(Ug.Damage)) {
+          this._undoBuffer._stageAction(
+            new CommandActionNoteConvertType(hitTestResult._target, Ug.Damage));
+        }
+        break;
+      
+      case "attr-Dir-Up":
+      case "attr-Dir-UpLeft":
+      case "attr-Dir-UpRight":
+      case "attr-Dir-Down":
+      case "attr-Dir-DownLeft":
+      case "attr-Dir-DownRight":
+        if (hitTestResult._target instanceof Ug.Air) {
+          let newDir = MenuItemIdToAirDirection[ret._getId() as keyof typeof MenuItemIdToAirDirection] as number;
+          if (hitTestResult._target._direction !== newDir) {
+            let oldProp = hitTestResult._target._create();
+            hitTestResult._target._copyPropertiesTo(oldProp);
+
+            hitTestResult._target._direction = newDir;
+            
+            this._undoBuffer._stageAction(
+              new CommandActionNoteProperty(hitTestResult._target, oldProp, false));
+          }
+        }
+        break;
+      
+      case "attr-Dir-Up":
+      case "attr-Dir-Down":
+      case "attr-Dir-Center":
+      case "attr-Dir-Left":
+      case "attr-Dir-Right":
+      case "attr-Dir-Rotate-Left":
+      case "attr-Dir-Rotate-Right":
+      case "attr-Dir-In-Out":
+      case "attr-Dir-Out-In":
+        if (hitTestResult._target instanceof Ug.ExTap) {
+          let newDir = MenuItemIdToExTapDirection[ret._getId() as keyof typeof MenuItemIdToExTapDirection] as number;
+          if (hitTestResult._target._direction !== newDir) {
+            let oldProp = hitTestResult._target._create();
+            hitTestResult._target._copyPropertiesTo(oldProp);
+
+            hitTestResult._target._direction = newDir;
+            
+            this._undoBuffer._stageAction(
+              new CommandActionNoteProperty(hitTestResult._target, oldProp, false));
+          }
+        }
+        break;
+    }
+    this._undoBuffer._commitRecording();
   }
 
   _draw() {

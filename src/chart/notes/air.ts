@@ -31,6 +31,22 @@ export class Air extends Note {
   }
 
   _isAir() { return true; }
+  
+  _convertable(type: typeof Note) : boolean {
+    if (type === AirHold) return true;
+    if (type === AirSlide) return true;
+    return false;
+  }
+
+  _convertTo(type: typeof Note) : Note|undefined {
+    if (!this._convertable(type))
+      return undefined;
+    
+    let note = new type;
+    Note.prototype._copyPropertiesTo.bind(this, note);
+    (note as AirHold|AirSlide)._inverted = this._inverted;
+    return note;
+  }
 }
 
 

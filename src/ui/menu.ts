@@ -3,6 +3,12 @@ import { UIEventTarget, UIEvent } from "./event";
 import { Frame } from "./frame";
 import { Position, Size, Rect } from "./util";
 
+export type MenuItemOptions = {
+  _checked?: boolean,
+  _visible?: boolean,
+  _disabled?: boolean
+}
+
 export class MenuItem extends UIEventTarget {
   protected _elm: HTMLDivElement;
   protected _elmItem: HTMLDivElement;
@@ -14,8 +20,9 @@ export class MenuItem extends UIEventTarget {
   protected _label: string = "";
   protected _accessKey: string = "";
   protected _disabled: boolean = false;
+  protected _visible: boolean = true;
   protected _isRoot: boolean = false;
-  protected _isChecked: boolean = false;
+  protected _checked: boolean = false;
 
   protected _dirty: boolean = true;
 
@@ -28,7 +35,7 @@ export class MenuItem extends UIEventTarget {
 
   protected _menuPopupDelay: number = 500;
 
-  constructor(id: string, label?: string, accessKey?: string) {
+  constructor(id: string, label?: string, accessKey?: string, options?: MenuItemOptions) {
     super();
     this._elm = this._createElement();
 
@@ -42,6 +49,9 @@ export class MenuItem extends UIEventTarget {
     this._id = id;
     this._label = label || "";
     this._accessKey = accessKey || "";
+    this._checked = options && options._checked ? options._checked : false;
+    this._visible = options && options._visible ? options._visible : true;
+    this._disabled = options && options._disabled ? options._disabled : false;
 
     this._updateElement();
   }
@@ -54,15 +64,23 @@ export class MenuItem extends UIEventTarget {
     if (!this._dirty)
       return;
     
+    this._elm.classList.toggle("ui-hide", !this._visible);
+    this._elm.classList.toggle("ui-disabled", this._disabled);
     this._elmItemText.innerText = this._label;
     this._elmItemAccessKey.classList.toggle("ui-hide", this._accessKey === "");
     this._elmItemAccessKey.innerText = this._accessKey;
-    this._elm.classList.toggle("ui-checked", this._isChecked);
+    this._elm.classList.toggle("ui-checked", this._checked);
   }
 
   protected _getParentUITarget() : UIEventTarget|undefined { return this._parent?.deref() as UIEventTarget|undefined; }
 
+  protected _isAllowedInteract() : boolean {
+    return this._visible && !this._disabled;
+  }
+
   protected _onItemMouseUp(item: MenuItem, isPrimaryButton: boolean) {
+    if (!item._isAllowedInteract())
+      return;
     if (item._hasChildren()) {
       if (this._selectedItem === item)
         return;
@@ -84,7 +102,7 @@ export class MenuItem extends UIEventTarget {
       this._popupDelayTimer = 0;
     }
 
-    if (!item._disabled) {
+    if (item._isAllowedInteract()) {
       if (noPopup) {
         this._popupDelayTimerFor = item;
       }
@@ -122,7 +140,7 @@ export class MenuItem extends UIEventTarget {
         if (index < 0)
           index = this._items.length - 1;
         
-        if (!this._items[index]._disabled)
+        if (this._items[index]._isAllowedInteract())
           break;
       }
       this._items[index]._elmItem.scrollIntoView({block: "nearest", inline: "nearest" });
@@ -135,7 +153,7 @@ export class MenuItem extends UIEventTarget {
         if (index >= this._items.length)
           index = 0;
         
-        if (!this._items[index]._disabled)
+        if (this._items[index]._isAllowedInteract())
           break;
       }
 
@@ -195,10 +213,11 @@ export class MenuItem extends UIEventTarget {
     let parent = this._parent?.deref();
     if (parent)
       parent._escapeMenu();
+    else
+      this._dispatchEvent(new UIEvent(this, "ui-cancel"));
   }
 
   protected _closePopup() {
-    console.log("!")
     let item = this._selectedItem;
     if (!item || !item._hasChildren())
       return;
@@ -401,13 +420,24 @@ export class MenuItem extends UIEventTarget {
     this._label = label;
     this._updateElement();
   }
-  _isDisabled() { return this._disabled; }
-  _setCheck(checked: boolean) {
-    this._dirty = checked !== this._isChecked;
-    this._isChecked = checked;
+  _setDisable(checked: boolean) {
+    this._dirty = checked !== this._disabled;
+    this._disabled = checked;
     this._updateElement();
   }
-  _getCheck() { return this._isChecked; }
+  _isDisabled() { return this._disabled; }
+  _setVisible(checked: boolean) {
+    this._dirty = checked !== this._visible;
+    this._visible = checked;
+    this._updateElement();
+  }
+  _isVisible() { return this._visible; }
+  _setCheck(checked: boolean) {
+    this._dirty = checked !== this._checked;
+    this._checked = checked;
+    this._updateElement();
+  }
+  _isChecked() { return this._checked; }
   
   _getPopupHtmlElement() : HTMLDivElement {
     if (!this._elmPopup) {
@@ -436,8 +466,7 @@ export class MenuItem extends UIEventTarget {
   protected _getPopupRootElement() : HTMLDivElement|undefined { return this._parent?.deref()?._getPopupRootElement(); }
 
   _eventOnItemClick(item: MenuItem) {
-    let event = new UIEvent(item, "ui-click");
-    item._dispatchEvent(event);
+    item._dispatchEvent(new UIEvent(item, "ui-click"));
   }
 
   _getItemById(id: string) : MenuItem|undefined {
@@ -449,6 +478,28 @@ export class MenuItem extends UIEventTarget {
       let x = item._getItemById(id);
       if (x)
         return x;
+    }
+  }
+
+  _setDisableAll(id: string, checked: boolean) {
+    if (id.length === 0)
+      return;
+    
+    if (this._id === id)
+      this._setDisable(checked);
+    for(const item of this._items) {
+      item._setDisableAll(id, checked);
+    }
+  }
+
+  _setVisibleAll(id: string, checked: boolean) {
+    if (id.length === 0)
+      return;
+    
+    if (this._id === id)
+      this._setVisible(checked);
+    for(const item of this._items) {
+      item._setVisibleAll(id, checked);
     }
   }
 
@@ -477,6 +528,22 @@ export class MenuItemSeparator extends MenuItem {
 
   protected _updateElement() { }
   
+  _appendItem(item: MenuItem) { }
+
+  _getHtmlElement() : HTMLDivElement { return this._elm; }
+}
+
+
+
+export class MenuItemStatic extends MenuItem {
+  protected _disabled: boolean = true;
+
+  constructor(label?: string) { super("", label); }
+
+  protected _createElement() : HTMLDivElement {
+    return createDivElement("ui-menu-item ui-menu-item-static");
+  }
+
   _appendItem(item: MenuItem) { }
 
   _getHtmlElement() : HTMLDivElement { return this._elm; }
@@ -628,18 +695,6 @@ export class ContextMenu extends MenuItem {
 
   constructor(frame: Frame) {
     super("");
-    this._getPopupHtmlElement().setAttribute("tabindex", "0");
-    this._getPopupHtmlElement().addEventListener("mouseleave", (e) => {
-      this._onPopupLeave();
-      e.stopPropagation();
-      e.preventDefault();
-    });
-    this._getPopupHtmlElement().addEventListener("keydown", (e) => {
-      this._onPopupKeyDown(e);
-      e.stopPropagation();
-      e.preventDefault();
-    });
-
     this._frame = frame;
     this._frame._getHtmlElement().appendChild(this._elm);
 
@@ -681,6 +736,30 @@ export class ContextMenu extends MenuItem {
     this._getPopupHtmlElement().classList.add("ui-show");
     this._layoutPopup(new Position(x, y));
     this._getPopupHtmlElement().focus();
+  }
+
+  _showPopupWait(x: number, y: number) : Promise<MenuItem|undefined> {
+    return new Promise<MenuItem|undefined>(resolve => {
+      this._visible = true;
+      this._getPopupHtmlElement().classList.add("ui-show");
+      this._layoutPopup(new Position(x, y));
+      this._getPopupHtmlElement().focus();
+
+      const callbackClick = (e: UIEvent<any>) => {
+        removeHandlers();
+        resolve(e._target);
+      }
+      const callbackCancel = (e: UIEvent<any>) => {
+        removeHandlers();
+        resolve(undefined);
+      }
+      const removeHandlers = () => {
+        this._removeEventHandler("ui-click", callbackClick);
+        this._removeEventHandler("ui-cancel", callbackCancel);
+      };
+      this._once("ui-click", callbackClick);
+      this._once("ui-cancel", callbackCancel);
+    });
   }
 
   _cancelPopup() {

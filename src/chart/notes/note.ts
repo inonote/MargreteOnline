@@ -42,6 +42,9 @@ export class Note extends ChartObject {
   _isLongChild() { return this._isGroundedLongChild() || this._isAirLongChild(); }
   _getPair() : Note|undefined { return this._pairNoteRef?.deref(); }
 
+  _convertable(type: typeof Note) : boolean { return false; }
+  _convertTo(type: typeof Note) : Note|undefined { return undefined; }
+
   /**
    * AIR、AIR-HOLD、AIR-SLIDE の接続に使用。
    * 子ノーツとして appendChild するのはロングノーツの中継点とかだけ。

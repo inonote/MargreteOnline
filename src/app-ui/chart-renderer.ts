@@ -461,6 +461,25 @@ export class ChartRenderer {
   }
 
   _hitTestAir(rm: RenderMeasures, result: HitTestResult) : boolean {
+    for(const note of this._chart._notes._childNodes as Ug.Note[]) {
+      if (!(note instanceof Ug.Air) || note._tick < rm._visibleRangeBegin || note._tick > rm._visibleRangeEnd)
+        continue;
+
+      let y = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+      let centerX = MathUtil.mix(rm._rect._left, rm._rect._right, (note._x + note._width / 2.0) / 16.0);
+      let realWidth = rm._rect._width * note._width / 16.0 * AIR_WIDTH_RATIO[Math.min(Math.max(note._width, 1, 16))];
+      let left = centerX - realWidth / 2;
+      let right = centerX + realWidth / 2;
+      let baseY = ChartRenderer._calcFieldYFromTick(rm, note._tick);
+      if (MathUtil._ptInRect(result._mousePos._x, result._mousePos._y, left, baseY - 42, right, baseY - 6)) {
+        result._relativeX = MathUtil.relative(left, right, result._mousePos._x);
+        result._relativeY = MathUtil.relative(baseY - 42, baseY - 6, result._mousePos._y);
+        result._offsetMouseX = result._mousePos._x - left;
+        result._offsetMouseY = result._mousePos._y - (baseY - 42);
+        result._target = note;
+        return true;
+      }
+    }
     return false;
   }
 

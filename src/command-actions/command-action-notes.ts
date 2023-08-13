@@ -87,3 +87,30 @@ export class CommandActionNoteDelete extends CommandActionNoteInsert {
   _undo = super._redo;
   _redo = super._undo;
 }
+
+export class CommandActionNoteConvertType extends CommandAction {
+  protected _oldNote: Ug.Note;
+  protected _newNote: Ug.Note;
+
+  constructor(oldNote: Ug.Note, convertTo: typeof Ug.Note) {
+    super();
+    this._oldNote = oldNote;
+    let converted = this._oldNote._convertTo(convertTo);
+
+    if (converted === undefined)
+      throw new Error("failed to convert note");
+    this._newNote = converted;
+  }
+
+  _undo(chart: Ug.Chart) : boolean {
+    this._newNote._parentNode?._swap(this._newNote, this._oldNote);
+    this._oldNote._isDirty = true;
+    return true;
+  }
+  
+  _redo(chart: Ug.Chart) : boolean {
+    this._oldNote._parentNode?._swap(this._oldNote, this._newNote);
+    this._newNote._isDirty = true;
+    return true;
+  }
+}

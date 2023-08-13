@@ -21,6 +21,22 @@ export class Tap extends Note {
   _isTapLike() { return true; }
   _isResizable() { return true; }
   _isAllowedWithAir() { return true; }
+  
+  _convertable(type: typeof Note) : boolean {
+    if (type === ExTap) return true;
+    if (type === Flick) return true;
+    if (type === Damage) return true;
+    return false;
+  }
+
+  _convertTo(type: typeof Note) : Note|undefined {
+    if (!this._convertable(type))
+      return undefined;
+    
+    let note = new type;
+    Note.prototype._copyPropertiesTo.call(this, note);
+    return note;
+  }
 }
 
 
@@ -51,6 +67,22 @@ export class ExTap extends Note {
     super._copyPropertiesTo(to);
     to._direction = this._direction;
   }
+  
+  _convertable(type: typeof Note) : boolean {
+    if (type === Tap) return true;
+    if (type === Flick) return true;
+    if (type === Damage) return true;
+    return false;
+  }
+
+  _convertTo(type: typeof Note) : Note|undefined {
+    if (!this._convertable(type))
+      return undefined;
+    
+    let note = new type;
+    Note.prototype._copyPropertiesTo.call(this, note);
+    return note;
+  }
 }
 
 
@@ -75,6 +107,22 @@ export class Flick extends Note {
     super._copyPropertiesTo(to);
     to._direction = this._direction;
   }
+  
+  _convertable(type: typeof Note) : boolean {
+    if (type === Tap) return true;
+    if (type === ExTap) return true;
+    if (type === Damage) return true;
+    return false;
+  }
+
+  _convertTo(type: typeof Note) : Note|undefined {
+    if (!this._convertable(type))
+      return undefined;
+    
+    let note = new type;
+    Note.prototype._copyPropertiesTo.call(this, note);
+    return note;
+  }
 }
 
 
@@ -86,6 +134,22 @@ export class Damage extends Note {
   _isTapLike() { return true; }
   _isResizable() { return true; }
   _isAllowedWithAir() { return true; }
+  
+  _convertable(type: typeof Note) : boolean {
+    if (type === Tap) return true;
+    if (type === ExTap) return true;
+    if (type === Flick) return true;
+    return false;
+  }
+
+  _convertTo(type: typeof Note) : Note|undefined {
+    if (!this._convertable(type))
+      return undefined;
+    
+    let note = new type;
+    Note.prototype._copyPropertiesTo.call(this, note);
+    return note;
+  }
 }
 
 

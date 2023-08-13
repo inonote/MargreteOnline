@@ -8,6 +8,7 @@
   --ui-item-text: #000000;
   --ui-item-active-bg: rgba(0, 0, 0, .125);
   --ui-item-active-text: #000000;
+  --ui-item-disabled-text: rgba(0, 0, 0, .5);
   --ui-item-separator: rgba(0, 0, 0, .125);
   --ui-item-pressed-bg: rgba(0, 0, 0, .375);
   --ui-text: #000000;
@@ -23,6 +24,7 @@ html.ui-dark-theme {
   --ui-item-text: #b6b8c7;
   --ui-item-active-bg: rgba(255, 255, 255, .125);
   --ui-item-active-text: #b6b8c7;
+  --ui-item-disabled-text: rgba(182, 184, 199, .5);
   --ui-item-separator: rgba(255, 255, 255, .125);
   --ui-item-pressed-bg: rgba(255, 255, 255, .125);
   --ui-text: #b6b8c7;
@@ -130,6 +132,15 @@ html, body {
 .ui-menu-item.ui-active > .ui-menu-item-label {
   background: var(--ui-item-active-bg);
   color: var(--ui-item-active-text);
+}
+
+.ui-menu-item.ui-menu-item-static > .ui-menu-item-label {
+  color: var(--ui-item-disabled-text);
+  font-size: 87.5%;
+}
+
+.ui-menu-item.ui-disabled > .ui-menu-item-label {
+  color: var(--ui-item-disabled-text);
 }
 
 .ui-menu-item-separator {
